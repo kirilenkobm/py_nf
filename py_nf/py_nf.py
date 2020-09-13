@@ -3,6 +3,7 @@ import subprocess
 import os
 import sys
 import time
+from datetime import datetime as dt
 from collections import Iterable
 import shutil
 import warnings
@@ -28,6 +29,7 @@ PROJECT_NAME_PARAM = "project_name"
 NO_NF_CHECK_PARAM = "no_nf_check"
 SWITCH_TO_LOCAL_PARAM = "switch_to_local"
 LOCAL = "local"
+
 
 class Nextflow:
     """Nextflow wrapper."""
@@ -72,10 +74,10 @@ class Nextflow:
         wd = os.getcwd()  # if we like to run nextflow from some specific directory
         self.wd = kwargs.get(WD_PARAM, wd)
         self.__check_dir_exists(self.wd)
-        timestamp = str(time.time()).split(".")[0]
-        project_name = f"nextflow_project_at_{timestamp}"
-        self.project_name = kwargs.get(PROJECT_NAME_PARAM, project_name)
-        self.project_dir = os.path.abspath(os.path.join(self.wd, self.project_name))
+        self.project_name = None
+        self.project_dir = None
+        project_opt = kwargs.get(PROJECT_NAME_PARAM, None)
+        self.set_project_name_and_dir(project_name=project_opt)
         self.jobs_num = 0
         self.joblist_path = None
         self.nextflow_script_path = None
@@ -85,6 +87,18 @@ class Nextflow:
         for elem in not_acceptable_args:
             msg = f"py_nf: Argument {elem} is not supported."
             warnings.warn(msg)
+
+    def set_project_name_and_dir(self, project_name=None):
+        """Set project name and directory.
+
+        Default value: nextflow_project_at_$timestamp.
+        """
+        if project_name is None:
+            # set default project name then
+            timestamp = str(time.time()).split(".")[0]
+            project_name = f"nextflow_project_at_{timestamp}"
+        self.project_name = project_name
+        self.project_dir = os.path.abspath(os.path.join(self.wd, self.project_name))
 
     def __check_executor(self):
         """Check executor parameter correctness.
@@ -158,9 +172,11 @@ class Nextflow:
         self.nextflow_script_path = os.path.abspath(os.path.join(self.project_dir, "script.nf"))
         self.nextflow_config_path = os.path.abspath(os.path.join(self.project_dir, "config.nf"))
         # write config file
+        now = dt.now().isoformat()
         f = open(self.nextflow_config_path, "w")
         # TODO: depending on executor parameters list might differ
         f.write(f"// automatically generated config file for project {self.project_name}\n")
+        f.write(f"// at: {now}\n")
         f.write(f"process.executor = '{self.executor}'\n")
         f.write(f"process.queue = '{self.queue}'\n")
         f.write(f"process.memory = '{self.memory}'\n")
@@ -170,6 +186,7 @@ class Nextflow:
         # write script
         f = open(self.nextflow_script_path, "w")
         f.write(f"// automatically generated script for project {self.project_name}\n")
+        f.write(f"// at: {now}\n")
         f.write(f"joblist_path = '{self.joblist_path}'\n")
         f.write(f"joblist = file(joblist_path)\n")
         f.write(f"lines = Channel.from(joblist.readLines())\n\n")
@@ -183,7 +200,7 @@ class Nextflow:
         f.write("}\n")
         f.close()
 
-    def execute(self, joblist):
+    def execute(self, joblist, config_file=None):
         """Execute jobs in parallel."""
         if not self.nextflow_checked:
             # TODO: show warning
@@ -191,6 +208,8 @@ class Nextflow:
         os.mkdir(self.project_dir) if not os.path.isdir(self.project_dir) else None
         self.__generate_joblist_file(joblist)
         self.__create_nf_script()
+        if config_file:  # in case if user wants to execute with pre-defined parameters
+            self.nextflow_script_path = config_file
         cmd = f"{self.nextflow_exe} {self.nextflow_script_path} -c {self.nextflow_config_path}"
         rc = subprocess.call(cmd, shell=True, cwd=self.project_dir)
         # remove project files logic: if pipeline fails, remove_logs keep all files
