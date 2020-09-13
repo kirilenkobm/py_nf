@@ -52,7 +52,8 @@ def have_same_content(files_list):
 
 
 if __name__ == "__main__":
-    nf_instance = Nextflow()
+    project_name_1 = "test_project_1"
+    nf_instance = Nextflow(project_name=project_name_1)
     joblist, to_check = get_joblist(1)
     nf_instance.execute(joblist)
     assert(have_same_content(to_check))
