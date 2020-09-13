@@ -3,3 +3,4 @@ tests/output/sample_*/
 nextflow_project_at_*/
 __pycache__/
 */__pycache__/*
+test_project_*/
