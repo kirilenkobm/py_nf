@@ -6,6 +6,7 @@ import pytest
 # a temporary solution for import error:
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from py_nf.py_nf import Nextflow
+from py_nf.py_nf import pick_executor
 
 
 def get_joblist(sample_num):
@@ -53,7 +54,8 @@ def have_same_content(files_list):
 
 if __name__ == "__main__":
     project_name_1 = "test_project_1"
-    nf_instance = Nextflow(project_name=project_name_1)
+    exe = pick_executor()
+    nf_instance = Nextflow(project_name=project_name_1, executor="slurm", switch_to_local=True)
     joblist, to_check = get_joblist(1)
     nf_instance.execute(joblist)
     assert(have_same_content(to_check))

@@ -66,6 +66,20 @@ Important:
 
 please use absolute pathways in your commands!
 
+You can use paths_to_abspaths_in_joblist function:
+
+```python
+from py_nf.py_nf import paths_to_abspaths_in_joblist
+
+joblist = ["script.py in/1.txt out/1.txt",
+           "script.py in/2.txt out/2.txt"
+           "script.py in/3.txt out/3.txt"
+           "script.py in/4.txt out/4.txt"
+           "script.py in/5.txt out/5.txt"]
+
+abs_path_joblist = paths_to_abspaths_in_joblist(joblist)
+```
+
 ### Read more about nextflow executors
 
 Nextflow supports a wide range of cluster schedulers, please read about them and

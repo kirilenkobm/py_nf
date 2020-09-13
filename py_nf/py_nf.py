@@ -33,6 +33,17 @@ LOCAL = "local"
 
 class Nextflow:
     """Nextflow wrapper."""
+    # each executor requires some binary to be accessible
+    # for instance, slurm requires sbatch and lsf needs bsub
+    executor_to_depend = {"slurm": "sbatch",
+                          "lsf": "bsub",
+                          "sge": "qsub",
+                          "psb": "qsub",
+                          "pbspro": "qsub",
+                          "moab": "msub",
+                          "nqsii": "qsub",
+                          "condor": "condor_submit"}
+
     def __init__(self, **kwargs):
         """Init nextflow wrapper."""
         # TODO: proper documentation of course
@@ -114,21 +125,13 @@ class Nextflow:
         # not local executor: requires extra check
         # each executor requires some binary to be accessible
         # for instance, slurm requires sbatch and lsf needs bsub
-        executor_to_depend = {"slurm": "sbatch",
-                              "lsf": "bsub",
-                              "sge": "qsub",
-                              "psb": "qsub",
-                              "pbspro": "qsub",
-                              "moab": "msub",
-                              "nqsii": "qsub",
-                              "condor": "condor_submit"}
         # TODO: handle ignite, kubernetes, awsbatch, tes and google-lifesciences
-        if self.executor not in executor_to_depend.keys():
+        if self.executor not in self.executor_to_depend.keys():
             msg = f"Executor {self.executor} is not supported, abort"
             raise NotImplementedError(msg)
         # we have a supported executor, need to check wheter the required
         # executable exists
-        depend_exe = executor_to_depend[self.executor]
+        depend_exe = self.executor_to_depend[self.executor]
         depend_exists = shutil.which(depend_exe)
         if depend_exists:
             # this is fine, let's go further
@@ -253,27 +256,55 @@ class Nextflow:
             line += f"{k}: {v}\n"
         return line
 
-    @staticmethod
-    def _all_paths_to_abspaths(line):
-        """Replace all relative paths to absolute paths in a string.
 
-        For example, a line:
-        script.py in/file1.txt out/file1.txt -v is transformed into:
-        /home/user/proj/script.py /home/user/proj/in/file1.txt /home/user/proj/out/file1.txt -v
-        """
-        # command is a space-separated list of arguments, some of them are paths
-        line_pieces = line.split()
-        upd_pieces = []
-        for elem in line_pieces:
-            # is parameter is not a path: we are not interested in it
-            # else, it might be either a file or a directory
-            is_file = os.path.isfile(elem)
-            is_dir = os.path.isdir(elem)
-            is_path = is_file or is_dir
-            if not is_path:
-                upd_pieces.append(elem)
-                continue
-            abspath = os.path.abspath(elem)
-            upd_pieces.append(abspath)
-        upd_string = " ".join(upd_pieces)
-        return upd_string
+def paths_to_abspaths_in_line(line):
+    """Replace all relative paths to absolute paths in a string.
+
+    For example, a line:
+    script.py in/file1.txt out/file1.txt -v is transformed into:
+    /home/user/proj/script.py /home/user/proj/in/file1.txt /home/user/proj/out/file1.txt -v
+    """
+    if not isinstance(line, str):
+        err_msg = f"paths_to_abspaths_in_line expects a string as input, got {type(line)}"
+        raise ValueError(err_msg)
+    # command is a space-separated list of arguments, some of them are paths
+    # TODO: what if someone separate arguments with tabs?
+    line_pieces = line.split()
+    upd_pieces = []
+    for elem in line_pieces:
+        # is parameter is not a path: we are not interested in it
+        # else, it might be either a file or a directory
+        is_file = os.path.isfile(elem)
+        is_dir = os.path.isdir(elem)
+        is_path = is_file or is_dir
+        if not is_path:
+            upd_pieces.append(elem)
+            continue
+        abspath = os.path.abspath(elem)
+        upd_pieces.append(abspath)
+    upd_string = " ".join(upd_pieces)
+    return upd_string
+
+
+def paths_to_abspaths_in_joblist(joblist):
+    """Just apply replace_all_paths_to_abspaths_in_line to each job."""
+    if not isinstance(joblist, Iterable):  # must be a list or other iterable
+        raise TypeError(f"Error! Joblist must be an iterable! Got {type(joblist)}")
+    upd_joblist = []
+    for line in joblist:
+        # just apply func to each line
+        upd_line = paths_to_abspaths_in_line(line)
+        upd_joblist.append(upd_line)
+    return upd_joblist
+
+
+def pick_executor():
+    """Pick the best possible executor."""
+    # TODO: if qsub is available then we need some extra procedure
+    for executor, dep_bin in Nextflow.executor_to_depend.items():
+        depend_available = shutil.which(dep_bin)
+        if depend_available is None:
+            continue
+        return executor
+    # didn't find any supported executor, use local
+    return LOCAL
