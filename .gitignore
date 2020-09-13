@@ -1,1 +1,3 @@
 .idea/
+tests/output/sample_*/
+nextflow_project_at_*/
