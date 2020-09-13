@@ -21,6 +21,7 @@ def get_joblist(sample_num):
             out_path = os.path.join(out_dir, in_out_filename)
             cmd = f"python3 {sample_script} {in_path} {out_path}"
             jobs.append(cmd)
+        os.mkdir(out_dir) if not os.path.isdir(out_dir) else None
     else:
         raise ValueError(f"Test number {sample_num} doesn't exist")
     return jobs
