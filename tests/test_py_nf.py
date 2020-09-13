@@ -57,5 +57,9 @@ if __name__ == "__main__":
     exe = pick_executor()
     nf_instance = Nextflow(project_name=project_name_1, executor="slurm", switch_to_local=True)
     joblist, to_check = get_joblist(1)
-    nf_instance.execute(joblist)
+    status = nf_instance.execute(joblist)
+    # if status != 0: nextflow subprocess crashed
+    # if status == 0 -> nextflow process finished without errors
+    assert(status == 0)
+    # check that results are correct:
     assert(have_same_content(to_check))

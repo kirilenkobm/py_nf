@@ -225,8 +225,8 @@ class Nextflow:
             # Nextflow pipe failed: we return 1.
             # User should decide whether to halt the upstream
             # functions or not (maybe do some garbage collecting or so)
-            msg = f"Nextflow pipeline {self.project_name} failed!" \
-                  f"execute function returns 1."
+            msg = f"Nextflow pipeline {self.project_name} failed! " \
+                  f"Execute function returns 1."
             warnings.warn(msg)
             return 1
         else:  # everything is fine
