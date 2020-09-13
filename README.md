@@ -19,7 +19,7 @@ pip install nextflow_wrapper
 Something like this:
 
 ```python
-from nextflow_wrapper import Nextflow as nf
+from py_nf import Nextflow as nf
 
 nextflow_runner = nf("local")
 nf.execute(joblist)

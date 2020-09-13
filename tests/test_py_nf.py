@@ -4,7 +4,7 @@ import sys
 import os
 # a temporary solution for import error:
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from nextflow_wrapper.nextflow_wrapper import Nextflow
+from py_nf.py_nf import Nextflow
 
 
 def get_joblist(sample_num):
