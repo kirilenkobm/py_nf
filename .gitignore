@@ -1,6 +1,16 @@
+# IDE stuff
 .idea/
-tests/output/sample_*/
-nextflow_project_at_*/
+
+# python stuff
 __pycache__/
 */__pycache__/*
+
+# test stuff
+tests/output/sample_*/
+nextflow_project_at_*/
 test_project_*/
+
+# package-related
+build/
+dist/
+py_nf.egg-info/
