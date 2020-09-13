@@ -26,7 +26,8 @@ FORCE_REMOVE_LOGS_PARAM = "force_remove_logs"
 WD_PARAM = "wd"
 PROJECT_NAME_PARAM = "project_name"
 NO_NF_CHECK_PARAM = "no_nf_check"
-
+SWITCH_TO_LOCAL_PARAM = "switch_to_local"
+LOCAL = "local"
 
 class Nextflow:
     """Nextflow wrapper."""
@@ -37,7 +38,8 @@ class Nextflow:
         self.params_list = {EXECUTOR_PARAM, NEXTFLOW_EXE_PARAM, ERROR_STRATEGY_PARAM,
                             MAX_RETRIES_PARAM, QUEUE_PARAM, MEMORY_PARAM, TIME_PARAM,
                             CPUS_PARAM, QUEUE_SIZE_PARAM, REMOVE_LOGS_PARAM, WD_PARAM,
-                            PROJECT_NAME_PARAM, NO_NF_CHECK_PARAM, FORCE_REMOVE_LOGS_PARAM}
+                            PROJECT_NAME_PARAM, NO_NF_CHECK_PARAM, FORCE_REMOVE_LOGS_PARAM,
+                            SWITCH_TO_LOCAL_PARAM}
         if kwargs.get(NEXTFLOW_EXE_PARAM):
             # in case if user provided a path to nextflow executable manually:
             self.nextflow_exe = os.path.abspath(kwargs[NEXTFLOW_EXE_PARAM])
@@ -49,7 +51,12 @@ class Nextflow:
         dont_check_nf = kwargs.get(NO_NF_CHECK_PARAM, False)
         self.__check_nextflow() if dont_check_nf is False else None
         # set nextflow parameters
-        self.executor = kwargs.get(EXECUTOR_PARAM, "local")  # local executor (CPU) is default
+        self.executor = kwargs.get(EXECUTOR_PARAM, LOCAL)  # local executor (CPU) is default
+        # if user picked "slurm" on a machine without sbatch nextflow will raise an error
+        # if "switch_to_local" value is True, py_nf will replace "slurm" to "local", if
+        # there is no slurm
+        self.switch_to_local = kwargs.get(SWITCH_TO_LOCAL_PARAM, False)
+        self.__check_executor()
         self.error_strategy = kwargs.get(ERROR_STRATEGY_PARAM, "retry")
         self.max_retries = kwargs.get(MAX_RETRIES_PARAM, 3)
         self.queue = kwargs.get(QUEUE_PARAM, "batch")
@@ -79,15 +86,65 @@ class Nextflow:
             msg = f"py_nf: Argument {elem} is not supported."
             warnings.warn(msg)
 
+    def __check_executor(self):
+        """Check executor parameter correctness.
+
+        For instance, if executor == 'slurm', but there is no slurm,
+        must not be overlooked. Please see documentation:
+        https://www.nextflow.io/docs/latest/executor.html
+        for details.
+        """
+        if self.executor == LOCAL:
+            # local executor must be reachable on any machine
+            return True
+        # not local executor: requires extra check
+        # each executor requires some binary to be accessible
+        # for instance, slurm requires sbatch and lsf needs bsub
+        executor_to_depend = {"slurm": "sbatch",
+                              "lsf": "bsub",
+                              "sge": "qsub",
+                              "psb": "qsub",
+                              "pbspro": "qsub",
+                              "moab": "msub",
+                              "nqsii": "qsub",
+                              "condor": "condor_submit"}
+        # TODO: handle ignite, kubernetes, awsbatch, tes and google-lifesciences
+        if self.executor not in executor_to_depend.keys():
+            msg = f"Executor {self.executor} is not supported, abort"
+            raise NotImplementedError(msg)
+        # we have a supported executor, need to check wheter the required
+        # executable exists
+        depend_exe = executor_to_depend[self.executor]
+        depend_exists = shutil.which(depend_exe)
+        if depend_exists:
+            # this is fine, let's go further
+            return True
+        # no way to call the required executor
+        if self.switch_to_local:
+            # if this flag set: just call with 'local' executor
+            # warn user anyway
+            msg = f"Cannot call nextflow pipe with {self.executor} executor: " \
+                  f"command {depend_exe} is not available. Switching to 'local' executor."
+            warnings.warn(msg)
+            self.executor = LOCAL
+            return True
+        # in this case we should terminate the program
+        err_msg = f"Cannot call nextflow pipeline with {self.executor} executor: " \
+                  f"command {depend_exe} is not available. Either call it on another " \
+                  f"machine or set switch_to_local parameter to True."
+        raise ValueError(err_msg)
+
     def __check_nextflow(self):
         """Check that nextflow is installed."""
         self.nextflow_checked = True
         cmd = f"{self.nextflow_exe} -v"
-        rc = subprocess.call(cmd, shell=True)
+        nf_here = shutil.which(self.nextflow_exe)
+        if nf_here:
+            return True
         err_msg = f"Nextflow installation not found." \
                   f"Command {cmd} failed. Please find nextflow installation guide " \
                   f"here: https://www.nextflow.io/"
-        if rc != 0:
+        if nf_here is None:
             raise ChildProcessError(err_msg)
 
     @staticmethod
