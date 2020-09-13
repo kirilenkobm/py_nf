@@ -22,6 +22,7 @@ TIME_PARAM = "time"
 CPUS_PARAM = "cpus"
 QUEUE_SIZE_PARAM = "queue_size"
 REMOVE_LOGS_PARAM = "remove_logs"
+FORCE_REMOVE_LOGS_PARAM = "force_remove_logs"
 WD_PARAM = "wd"
 PROJECT_NAME_PARAM = "project_name"
 NO_NF_CHECK_PARAM = "no_nf_check"
@@ -36,7 +37,7 @@ class Nextflow:
         self.params_list = {EXECUTOR_PARAM, NEXTFLOW_EXE_PARAM, ERROR_STRATEGY_PARAM,
                             MAX_RETRIES_PARAM, QUEUE_PARAM, MEMORY_PARAM, TIME_PARAM,
                             CPUS_PARAM, QUEUE_SIZE_PARAM, REMOVE_LOGS_PARAM, WD_PARAM,
-                            PROJECT_NAME_PARAM, NO_NF_CHECK_PARAM}
+                            PROJECT_NAME_PARAM, NO_NF_CHECK_PARAM, FORCE_REMOVE_LOGS_PARAM}
         if kwargs.get(NEXTFLOW_EXE_PARAM):
             # in case if user provided a path to nextflow executable manually:
             self.nextflow_exe = os.path.abspath(kwargs[NEXTFLOW_EXE_PARAM])
@@ -57,7 +58,10 @@ class Nextflow:
         self.cpus = kwargs.get(CPUS_PARAM, 1)
         self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)
         # set directory parameters
+        # remove logs will remove project directory only in case of successful pipe execution
+        # force_remove_logs will remove this anyway
         self.remove_logs = kwargs.get(REMOVE_LOGS_PARAM, False)
+        self.force_remove_logs = kwargs.get(FORCE_REMOVE_LOGS_PARAM, False)
         wd = os.getcwd()  # if we like to run nextflow from some specific directory
         self.wd = kwargs.get(WD_PARAM, wd)
         self.__check_dir_exists(self.wd)
@@ -125,18 +129,26 @@ class Nextflow:
     def execute(self, joblist):
         """Execute jobs in parallel."""
         if not self.nextflow_checked:
+            # TODO: show warning
             self.__check_nextflow()
         os.mkdir(self.project_dir) if not os.path.isdir(self.project_dir) else None
         self.__generate_joblist_file(joblist)
         self.__create_nf_script()
         cmd = f"{self.nextflow_exe} {self.nextflow_script_path} -c {self.nextflow_config_path}"
         rc = subprocess.call(cmd, shell=True, cwd=self.project_dir)
-        if self.remove_logs:
+        # remove project files logic: if pipeline fails, remove_logs keep all files
+        # in case of force_remove_logs we delete them anyway
+        remove_files = self.force_remove_logs or (self.remove_logs and rc == 0)
+        if remove_files:
             shutil.rmtree(self.project_dir) if os.path.isdir(self.project_dir) else None
 
         if rc != 0:
-            err_msg = "Warning! Nextflow pipeline failed!\n"
-            sys.stderr.write(err_msg)
+            # Nextflow pipe failed: we return 1.
+            # User should decide whether to halt the upstream
+            # functions or not (maybe do some garbage collecting or so)
+            msg = f"Nextflow pipeline {self.project_name} failed!" \
+                  f"execute function returns 1."
+            warnings.warn(msg)
             return 1
         else:  # everything is fine
             return 0
