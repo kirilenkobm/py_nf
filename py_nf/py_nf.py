@@ -5,6 +5,7 @@ import sys
 import time
 from collections import Iterable
 import shutil
+import warnings
 
 __author__ = "Bogdan Kirilenko"
 __version__ = "0.1 alpha"
@@ -23,6 +24,7 @@ QUEUE_SIZE_PARAM = "queue_size"
 REMOVE_LOGS_PARAM = "remove_logs"
 WD_PARAM = "wd"
 PROJECT_NAME_PARAM = "project_name"
+NO_NF_CHECK_PARAM = "no_nf_check"
 
 
 class Nextflow:
@@ -34,13 +36,17 @@ class Nextflow:
         self.params_list = {EXECUTOR_PARAM, NEXTFLOW_EXE_PARAM, ERROR_STRATEGY_PARAM,
                             MAX_RETRIES_PARAM, QUEUE_PARAM, MEMORY_PARAM, TIME_PARAM,
                             CPUS_PARAM, QUEUE_SIZE_PARAM, REMOVE_LOGS_PARAM, WD_PARAM,
-                            PROJECT_NAME_PARAM}
+                            PROJECT_NAME_PARAM, NO_NF_CHECK_PARAM}
         if kwargs.get(NEXTFLOW_EXE_PARAM):
             # in case if user provided a path to nextflow executable manually:
             self.nextflow_exe = os.path.abspath(kwargs[NEXTFLOW_EXE_PARAM])
         else:  # otherwise try default nextflow (must be in $PATH)
             self.nextflow_exe = NEXTFLOW_DEFAULT_EXE
-        self.__check_nextflow()  # if not installed: no way to continue
+        # check whether nextflow is installed and reachable
+        # except user asked not to check for this here
+        self.nextflow_checked = False
+        dont_check_nf = kwargs.get(NO_NF_CHECK_PARAM, False)
+        self.__check_nextflow() if dont_check_nf is False else None
         # set nextflow parameters
         self.executor = kwargs.get(EXECUTOR_PARAM, "local")  # local executor (CPU) is default
         self.error_strategy = kwargs.get(ERROR_STRATEGY_PARAM, "retry")
@@ -63,14 +69,20 @@ class Nextflow:
         self.joblist_path = None
         self.nextflow_script_path = None
         self.nextflow_config_path = None
-        # TODO: check for not acceptable params
+        # show warnings if user provided not supported arguments
+        not_acceptable_args = set(kwargs.keys()).difference(self.params_list)
+        for elem in not_acceptable_args:
+            msg = f"py_nf: Argument {elem} is not supported."
+            warnings.warn(msg)
 
     def __check_nextflow(self):
         """Check that nextflow is installed."""
+        self.nextflow_checked = True
         cmd = f"{self.nextflow_exe} -v"
         rc = subprocess.call(cmd, shell=True)
-        err_msg = "Error! Nextflow installation not found." \
-                  "Command {} failed".format(cmd)
+        err_msg = f"Nextflow installation not found." \
+                  f"Command {cmd} failed. Please find nextflow installation guide " \
+                  f"here: https://www.nextflow.io/"
         if rc != 0:
             raise ChildProcessError(err_msg)
 
@@ -112,6 +124,8 @@ class Nextflow:
 
     def execute(self, joblist):
         """Execute jobs in parallel."""
+        if not self.nextflow_checked:
+            self.__check_nextflow()
         os.mkdir(self.project_dir) if not os.path.isdir(self.project_dir) else None
         self.__generate_joblist_file(joblist)
         self.__create_nf_script()
@@ -150,3 +164,28 @@ class Nextflow:
             # TODO: improve this
             line += f"{k}: {v}\n"
         return line
+
+    @staticmethod
+    def _all_paths_to_abspaths(line):
+        """Replace all relative paths to absolute paths in a string.
+
+        For example, a line:
+        script.py in/file1.txt out/file1.txt -v is transformed into:
+        /home/user/proj/script.py /home/user/proj/in/file1.txt /home/user/proj/out/file1.txt -v
+        """
+        # command is a space-separated list of arguments, some of them are paths
+        line_pieces = line.split()
+        upd_pieces = []
+        for elem in line_pieces:
+            # is parameter is not a path: we are not interested in it
+            # else, it might be either a file or a directory
+            is_file = os.path.isfile(elem)
+            is_dir = os.path.isdir(elem)
+            is_path = is_file or is_dir
+            if not is_path:
+                upd_pieces.append(elem)
+                continue
+            abspath = os.path.abspath(elem)
+            upd_pieces.append(abspath)
+        upd_string = " ".join(upd_pieces)
+        return upd_string
