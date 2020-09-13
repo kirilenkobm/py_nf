@@ -1,7 +1,6 @@
 """Nextflow wrapper."""
 import subprocess
 import os
-import sys
 import time
 from datetime import datetime as dt
 from collections import Iterable
@@ -129,7 +128,7 @@ class Nextflow:
         if self.executor not in self.executor_to_depend.keys():
             msg = f"Executor {self.executor} is not supported, abort"
             raise NotImplementedError(msg)
-        # we have a supported executor, need to check wheter the required
+        # we have a supported executor, need to check whether the required
         # executable exists
         depend_exe = self.executor_to_depend[self.executor]
         depend_exists = shutil.which(depend_exe)

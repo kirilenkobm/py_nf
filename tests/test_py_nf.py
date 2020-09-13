@@ -16,38 +16,38 @@ def get_joblist(sample_num):
     if sample_num == 1:
         jobs = []
         out_files = []
-        ethalon_files = []
+        ref_result_files = []
         in_dir = os.path.join(abs_test_path, "input_test", "sample_1")
         out_dir = os.path.join(abs_test_path, "output", "sample_1")
-        ethalon_dir = os.path.join(abs_test_path, "ethalon_output", "sample_1")
+        exp_out_dir = os.path.join(abs_test_path, "expected_output", "sample_1")
         for i in range(1, 5):
             in_out_filename = f"file_{i}.fa"
             in_path = os.path.join(in_dir, in_out_filename)
             out_path = os.path.join(out_dir, in_out_filename)
-            ethalon_out_path = os.path.join(ethalon_dir, in_out_filename)
+            exp_out_path = os.path.join(exp_out_dir, in_out_filename)
             cmd = f"python3 {sample_script} {in_path} {out_path}"
             jobs.append(cmd)
             out_files.append(out_path)
-            ethalon_files.append(ethalon_out_path)
+            ref_result_files.append(exp_out_path)
         os.mkdir(out_dir) if not os.path.isdir(out_dir) else None
-        to_compare = list(zip(out_files, ethalon_files))
+        to_compare = list(zip(out_files, ref_result_files))
         return jobs, to_compare
     else:
         raise ValueError(f"Test number {sample_num} doesn't exist")
 
 
 def have_same_content(files_list):
-    """Check that out and ethalon files have the same content."""
+    """Check that out and reference (expected output) files have the same content."""
     for elem in files_list:
         out_file = elem[0]
-        ethalon = elem[1]
+        exp_out = elem[1]
         if not os.path.isfile(out_file):
             return False
         with open(out_file, "r") as f:
             out_str = f.read()
-        with open(ethalon, "r") as f:
-            ethalon_str = f.read()
-        if out_str != ethalon_str:
+        with open(exp_out, "r") as f:
+            exp_out_str = f.read()
+        if out_str != exp_out_str:
             return False
     return True
 
