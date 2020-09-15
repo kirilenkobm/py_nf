@@ -28,6 +28,7 @@ PROJECT_NAME_PARAM = "project_name"
 NO_NF_CHECK_PARAM = "no_nf_check"
 SWITCH_TO_LOCAL_PARAM = "switch_to_local"
 LOCAL = "local"
+NEXTFLOW_LOG_FILENAME = ".nextflow.log"
 
 
 class Nextflow:
@@ -92,6 +93,8 @@ class Nextflow:
         self.joblist_path = None
         self.nextflow_script_path = None
         self.nextflow_config_path = None
+        self.executed_with_success = None
+        self.executed_at = "N/A"
         # show warnings if user provided not supported arguments
         not_acceptable_args = set(kwargs.keys()).difference(self.params_list)
         for elem in not_acceptable_args:
@@ -105,7 +108,7 @@ class Nextflow:
         """
         if project_name is None:
             # set default project name then
-            timestamp = str(time.time()).split(".")[0]
+            timestamp = self._get_tmstmp()
             project_name = f"nextflow_project_at_{timestamp}"
         self.project_name = project_name
         self.project_dir = os.path.abspath(os.path.join(self.wd, self.project_name))
@@ -205,7 +208,6 @@ class Nextflow:
     def execute(self, joblist, config_file=None):
         """Execute jobs in parallel."""
         if not self.nextflow_checked:
-            # TODO: show warning
             self.__check_nextflow()
         os.mkdir(self.project_dir) if not os.path.isdir(self.project_dir) else None
         self.__generate_joblist_file(joblist)
@@ -213,6 +215,7 @@ class Nextflow:
         if config_file:  # in case if user wants to execute with pre-defined parameters
             self.nextflow_script_path = config_file
         cmd = f"{self.nextflow_exe} {self.nextflow_script_path} -c {self.nextflow_config_path}"
+        self.executed_at = self._get_tmstmp()
         rc = subprocess.call(cmd, shell=True, cwd=self.project_dir)
         # remove project files logic: if pipeline fails, remove_logs keep all files
         # in case of force_remove_logs we delete them anyway
@@ -227,8 +230,10 @@ class Nextflow:
             msg = f"Nextflow pipeline {self.project_name} failed! " \
                   f"Execute function returns 1."
             warnings.warn(msg)
+            self.executed_with_success = False
             return 1
         else:  # everything is fine
+            self.executed_with_success = True
             return 0
 
     def __generate_joblist_file(self, joblist):
@@ -247,13 +252,86 @@ class Nextflow:
             self.jobs_num += 1
         f.close()
 
+    def get_nf_log(self, first=False):
+        """Retrieve nextflow log.
+
+        Return None if nextflow logs are absent.
+        As default shows the latest log.
+        If first flag is set, returns the first one."""
+        if os.path.isdir(self.project_dir):
+            files_in_proj_dir = os.listdir(self.project_dir)
+        else:  # no dir: no logs
+            return None
+        nf_log_files = [f for f in files_in_proj_dir if f.startswith(NEXTFLOW_LOG_FILENAME)]
+        if len(nf_log_files) == 0:
+            # no logs: nothing to return
+            return None
+        # may be something like ['.nextflow.log.2', '.nextflow.log', '.nextflow.log.1']
+        # if there is only file: return this
+        if len(nf_log_files) == 1:
+            to_open = nf_log_files[0]
+            path_to_open = os.path.join(self.project_dir, to_open)
+            return self._get_file_content(path_to_open)
+        # if we required the first one and there is .nextflow.log inside: we need this
+        if NEXTFLOW_LOG_FILENAME in nf_log_files and first:
+            path_to_open = os.path.join(self.project_dir, NEXTFLOW_LOG_FILENAME)
+            return self._get_file_content(path_to_open)
+        # if we required the first one BUT there is no '.nextflow.log'
+        # at least show a warning
+        if first:
+            msg = "get_nf_log(): requested the first log but .nextflow.log not " \
+                  f"found in the {self.project_dir}"
+            warnings.warn(msg)
+        # we are here: let's remove .nextflow.log for simplicity, other files can be split(".")
+        # -> lets us to get a number
+        nf_log_files = [x for x in nf_log_files if x != NEXTFLOW_LOG_FILENAME]
+        print(nf_log_files)
+        dot_splits = [x.split(".") for x in nf_log_files]
+        # maybe a bit paranoid, but what if someone put something line .nextflow.logxxxx inside?
+        # we need only the splits with 4 elements: ["", "nextflow", "log", "X"]
+        dot_splits_len = [x for x in dot_splits if len(x) == 4]
+        if len(dot_splits_len) == 0:
+            return None
+        # also we need the 3th element to be a number, what if there is something
+        # .nextflow.log.trash inside?
+        dot_splits_numeric = [x for x in dot_splits_len if x[3].isnumeric()]
+        if len(dot_splits_numeric) == 0:
+            return None
+        # well, seems like there are numbers only
+        num_to_filename = [(int(x[3]), ".".join(x)) for x in dot_splits_numeric]
+        sorted_by_num = sorted(num_to_filename, key=lambda x: x[0])
+        to_open = sorted_by_num[0][1] if first else sorted_by_num[-1][1]
+        path_to_open = os.path.join(self.project_dir, to_open)
+        return self._get_file_content(path_to_open)
+
     def __repr__(self):
         """Show parameters."""
-        line = "Nextflow wrapper, parameters:\n"
-        for k, v in self.__dict__.items():
-            # TODO: improve this
-            line += f"{k}: {v}\n"
-        return line
+        lines = ["<nf_py Nextflow wrapper>\n",
+                 f"project_name: {self.project_name}\n",
+                 f"nextflow executable: {self.nextflow_exe}\n",
+                 f"executor: {self.executor}\n",
+                 f"wd: {self.wd}\n",
+                 f"executed_success: {self.executed_with_success}\n",
+                 f"executed_at: {self.executed_at}\n",
+                 f"queue: {self.queue}\n",
+                 f"memory: {self.memory}\n",
+                 f"time: {self.time}\n",
+                 f"queue_size: {self.queue_size}\n"]
+        return "".join(lines)
+
+    @staticmethod
+    def _get_tmstmp():
+        """Get current timestamp."""
+        return str(time.time()).split(".")[0]
+
+    @staticmethod
+    def _get_file_content(path):
+        """Just return file content."""
+        if not os.path.isfile(path):
+            raise ValueError(f"File {path} not found!")
+        with open(path, "r") as f:
+            content = f.read()
+        return content
 
 
 def paths_to_abspaths_in_line(line):
@@ -267,7 +345,6 @@ def paths_to_abspaths_in_line(line):
         err_msg = f"paths_to_abspaths_in_line expects a string as input, got {type(line)}"
         raise ValueError(err_msg)
     # command is a space-separated list of arguments, some of them are paths
-    # TODO: what if someone separate arguments with tabs?
     line_pieces = line.split()
     upd_pieces = []
     for elem in line_pieces:
