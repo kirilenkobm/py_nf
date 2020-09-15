@@ -1,10 +1,12 @@
 """Nextflow wrapper."""
 import subprocess
 import os
+import sys
 import time
 from datetime import datetime as dt
 from collections import Iterable
 import shutil
+import inspect
 import warnings
 
 __author__ = "Bogdan Kirilenko"
@@ -20,6 +22,7 @@ QUEUE_PARAM = "queue"
 MEMORY_PARAM = "memory"
 TIME_PARAM = "time"
 CPUS_PARAM = "cpus"
+VERBOSE = "verbose"
 QUEUE_SIZE_PARAM = "queue_size"
 REMOVE_LOGS_PARAM = "remove_logs"
 FORCE_REMOVE_LOGS_PARAM = "force_remove_logs"
@@ -52,7 +55,8 @@ class Nextflow:
                             MAX_RETRIES_PARAM, QUEUE_PARAM, MEMORY_PARAM, TIME_PARAM,
                             CPUS_PARAM, QUEUE_SIZE_PARAM, REMOVE_LOGS_PARAM, WD_PARAM,
                             PROJECT_NAME_PARAM, NO_NF_CHECK_PARAM, FORCE_REMOVE_LOGS_PARAM,
-                            SWITCH_TO_LOCAL_PARAM}
+                            SWITCH_TO_LOCAL_PARAM, VERBOSE}
+        self.verbosity_on = True if kwargs.get(VERBOSE) else False
         if kwargs.get(NEXTFLOW_EXE_PARAM):
             # in case if user provided a path to nextflow executable manually:
             self.nextflow_exe = os.path.abspath(kwargs[NEXTFLOW_EXE_PARAM])
@@ -60,7 +64,7 @@ class Nextflow:
             self.nextflow_exe = NEXTFLOW_DEFAULT_EXE
         # check whether nextflow is installed and reachable
         # except user asked not to check for this here
-        self.nextflow_checked = False
+        self.__nextflow_checked = False
         dont_check_nf = kwargs.get(NO_NF_CHECK_PARAM, False)
         self.__check_nextflow() if dont_check_nf is False else None
         # set nextflow parameters
@@ -100,12 +104,18 @@ class Nextflow:
         for elem in not_acceptable_args:
             msg = f"py_nf: Argument {elem} is not supported."
             warnings.warn(msg)
+        self.__v(f"Initiated py_nf with the following params:\n{self.__repr__()}")
+
+    def __v(self, msg):
+        """Verbosity message."""
+        sys.stderr.write(f"{msg}\n") if self.verbosity_on else None
 
     def set_project_name_and_dir(self, project_name=None):
         """Set project name and directory.
 
         Default value: nextflow_project_at_$timestamp.
         """
+        self.__v(f"Calling {inspect.currentframe()}\nwith params: project_name={project_name}")
         if project_name is None:
             # set default project name then
             timestamp = self._get_tmstmp()
@@ -121,6 +131,7 @@ class Nextflow:
         https://www.nextflow.io/docs/latest/executor.html
         for details.
         """
+        self.__v(f"Calling {inspect.currentframe()}; self.executor={self.executor}")
         if self.executor == LOCAL:
             # local executor must be reachable on any machine
             return True
@@ -155,7 +166,8 @@ class Nextflow:
 
     def __check_nextflow(self):
         """Check that nextflow is installed."""
-        self.nextflow_checked = True
+        self.__v(f"Calling {inspect.currentframe()}; self.nextflow_exe={self.nextflow_exe}")
+        self.__nextflow_checked = True
         cmd = f"{self.nextflow_exe} -v"
         nf_here = shutil.which(self.nextflow_exe)
         if nf_here:
@@ -174,6 +186,7 @@ class Nextflow:
 
     def __create_nf_script(self):
         """Create nextflow script and config file"""
+        self.__v(f"Calling {inspect.currentframe()}")
         self.nextflow_script_path = os.path.abspath(os.path.join(self.project_dir, "script.nf"))
         self.nextflow_config_path = os.path.abspath(os.path.join(self.project_dir, "config.nf"))
         # write config file
@@ -188,6 +201,7 @@ class Nextflow:
         f.write(f"process.time = '{self.time}'\n")
         f.write(f"process.cpus = '{self.cpus}'\n")
         f.close()
+        self.__v(f"Created config file at {self.nextflow_config_path}")
         # write script
         f = open(self.nextflow_script_path, "w")
         f.write(f"// automatically generated script for project {self.project_name}\n")
@@ -204,15 +218,16 @@ class Nextflow:
         f.write("    \"${line}\"\n")
         f.write("}\n")
         f.close()
+        self.__v(f"Created script at {self.nextflow_script_path}")
 
     def execute(self, joblist, config_file=None):
         """Execute jobs in parallel."""
-        if not self.nextflow_checked:
+        if not self.__nextflow_checked:
             self.__check_nextflow()
         os.mkdir(self.project_dir) if not os.path.isdir(self.project_dir) else None
         self.__generate_joblist_file(joblist)
         self.__create_nf_script()
-        if config_file:  # in case if user wants to execute with pre-defined parameters
+        if config_file:  # in case user wants to execute with pre-defined config file
             self.nextflow_script_path = config_file
         cmd = f"{self.nextflow_exe} {self.nextflow_script_path} -c {self.nextflow_config_path}"
         self.executed_at = self._get_tmstmp()
@@ -241,6 +256,7 @@ class Nextflow:
 
         Joblist expected type: list of strings.
         """
+        self.__v(f"Calling {inspect.currentframe()}")
         self.joblist_path = os.path.abspath(os.path.join(self.project_dir, "joblist.txt"))
         if not isinstance(joblist, Iterable):  # must be a list or other iterable
             raise TypeError(f"Error! Joblist must be an iterable! Got {type(joblist)}")
