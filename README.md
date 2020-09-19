@@ -1,21 +1,13 @@
 # py_nf library
 
-This is a draft!
+Python library to run batches of jobs using Nextflow.
 
-Python wrapper around Nextflow to execute job lists in parallel.
+If you write computational workflows in Python and need Nextflow only
+as an abstraction layer to execute batches of jobs, most likely py_nf is
+what you are looking for.
 
-For those who writes computational pipelines in Python and needs Nextflow only
-to execute parallel steps -- on cluster or CPU.
-The idea is the following: user just imports the py_nf library, sets some parameters such as
-executor, amount of memory and so on and runs the jobs.
-So there are just 3 commands from user's perspective.
-The library takes care about creating a Nextflow script and configuration file. 
-
-This library is convenient if you create job lists for cluster in Python
-and don't like to learn another scripting language or the Nextflow language is not
-powerful enough for you needs.
-In this case the only thing you need from Nextflow is pushing your jobs to scheduler,
-this is exactly what this library is written for.
+Py_nf is a wrapper around nextflow: you provide a job list and batch parameters,
+then py_nf creates and executes a temporary Nextflow pipeline.
 
 ## Installation
 
@@ -29,9 +21,7 @@ curl -fsSL https://get.nextflow.io | bash
 # OR
 conda install -c bioconda nextflow
 ```
-
-For now this is the only way to install this library, will be added
-to PyPi index later:
+To install py_nf itself do the following:
 
 ```shell script
 python3 setup.py bdist_wheel
@@ -40,30 +30,40 @@ pip3 install dist/py_nf-0.1.0-py3-none-any.whl
 
 ## Usage
 
-This is a basic usage scenario:
+Basic usage scenario looks like this:
 
 ```python
 # import py_nf library:
 from py_nf.py_nf import Nextflow
 
-# initiate nextflow handler:
+# initiate nextflow handler
+# here you can define parameters such as executor, amount of memory per job
+# and so on, see Nextflow class parameters section for details
 nf = Nextflow(executor="local", project_name="project", cpus=4)
 
-# create joblist:
+# then generate a joblist
+# this must be a list (or other iterable such as tuple or even a generator) of strings
+# where each string is a command
 joblist = ["script.py in/1.txt out/1.txt",
            "script.py in/2.txt out/2.txt"
            "script.py in/3.txt out/3.txt"
            "script.py in/4.txt out/4.txt"
            "script.py in/5.txt out/5.txt"]
 
-# execute jobs:
+# then execute this joblist using Nextflow
 status = nf.execute(joblist)
 
+# look at return status, there are 2 cases: either 0 or something else
 if status == 0:
+    # 0 means that Nextflow pipeline was executed without errors
     # enjoy your results
     pass
 else:
-    # pipeline failed, do something!
+    # sadly, the pipeline failed
+    # py_nf doesn't terminate the program in this case to let user
+    # to do some cleanup, for example
+    # please read nextflow output messages and logs to figure out
+    # what exactly happened
     # do_some_cleanup()
     exit(1)
 ```
@@ -86,7 +86,7 @@ joblist = ["script.py in/1.txt out/1.txt -p",
 abs_path_joblist = paths_to_abspaths_in_joblist(joblist)
 ```
 
-This function will search for file or directory paths in your job list and
+This function will search for file or directory paths in your batch and
 then replace them with absolute paths.
 
 For example, this command:
@@ -114,7 +114,8 @@ about them in the [documentation](https://www.nextflow.io/docs/latest/process.ht
 
 1) *nextflow_executable*, "nextflow" is default.
 Define the path to nextflow executable you like to use:
-nf = Nextflow(nextflow_executable="/home/user/nf_v20/nextflow")
+nf = Nextflow(nextflow_executable="/home/user/nf_v20/nextflow").
+Make sure you have the nextflow executable in a directory accesable 
 2) *executor*, "local" is default.
 Please read more about Nextflow executor in the corresponding section.
 To use "slurm" executor do the following:
