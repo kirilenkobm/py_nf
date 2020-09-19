@@ -7,19 +7,20 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from py_nf.py_nf import Nextflow
 from py_nf.py_nf import pick_executor
+from py_nf.utils import paths_to_abspaths_in_joblist
 
 
 def get_joblist(sample_num):
     """Generate joblist."""
-    abs_test_path = os.path.abspath(os.path.dirname(__file__))
-    sample_script = os.path.join(abs_test_path, "sample_script.py")
+    test_path = os.path.dirname(__file__)
+    sample_script = os.path.join(test_path, "sample_script.py")
     if sample_num == 1:
         jobs = []
         out_files = []
         ref_result_files = []
-        in_dir = os.path.join(abs_test_path, "input_test", "sample_1")
-        out_dir = os.path.join(abs_test_path, "output", "sample_1")
-        exp_out_dir = os.path.join(abs_test_path, "expected_output", "sample_1")
+        in_dir = os.path.join(test_path, "input_test", "sample_1")
+        out_dir = os.path.join(test_path, "output", "sample_1")
+        exp_out_dir = os.path.join(test_path, "expected_output", "sample_1")
         for i in range(1, 5):
             in_out_filename = f"file_{i}.fa"
             in_path = os.path.join(in_dir, in_out_filename)
@@ -57,7 +58,8 @@ if __name__ == "__main__":
     exe = pick_executor()
     nf_instance = Nextflow(project_name=project_name_1, executor="slurm", switch_to_local=True)
     joblist, to_check = get_joblist(1)
-    status = nf_instance.execute(joblist)
+    abs_joblist = paths_to_abspaths_in_joblist(joblist)
+    status = nf_instance.execute(abs_joblist)
     # if status != 0: nextflow subprocess crashed
     # if status == 0 -> nextflow process finished without errors
     assert(status == 0)
