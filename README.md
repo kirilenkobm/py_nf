@@ -11,6 +11,7 @@ then py_nf creates and executes a temporary Nextflow pipeline.
 
 ## Installation
 
+### Nextflow
 First of all install Nextflow and make sure you can call it.
 Please see [nextflow.io](https://nextflow.io) for details.
 
@@ -21,6 +22,17 @@ curl -fsSL https://get.nextflow.io | bash
 # OR
 conda install -c bioconda nextflow
 ```
+
+Alternatively, you can use utils.install_nf_if_not_installed function:
+
+```python
+from py_nf.utils import install_nf_if_not_installed
+# nf_executable -> absolute path to Nextflow executable
+nf_executable = install_nf_if_not_installed()
+```
+
+### Py_nf library
+
 To install py_nf itself do the following:
 
 ```shell script
@@ -72,10 +84,10 @@ Important:
 
 please use absolute pathways in your commands!
 
-You can use paths_to_abspaths_in_joblist function:
+You can use utils.paths_to_abspaths_in_joblist function:
 
 ```python
-from py_nf.py_nf import paths_to_abspaths_in_joblist
+from py_nf.utils import paths_to_abspaths_in_joblist
 
 joblist = ["script.py in/1.txt out/1.txt -p",
            "script.py in/2.txt out/2.txt -p"

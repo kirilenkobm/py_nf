@@ -4,6 +4,12 @@
 A way to install this:
 python3 setup.py bdist_wheel
 pip3 install dist/py_nf-0.1.0-py3-none-any.whl
+
+Load to test-pypi:
+python3 setup.py sdist bdist_wheel
+python3 -m twine upload --repository testpypi dist/*
+Install from test-pypi:
+pip install -i https://test.pypi.org/simple/ py-nf==0.1.0 --user
 """
 from setuptools import find_packages, setup
 
