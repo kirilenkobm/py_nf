@@ -1,4 +1,4 @@
-"""Nextflow wrapper."""
+"""Py-nf core functionality."""
 import subprocess
 import os
 import sys
@@ -245,17 +245,17 @@ class Nextflow:
 
         # TODO: maybe add a param to not kill program if nf pipe fails (kill by default)
         if rc != 0:
-            self.__v("Nextflow pipeline executed successfully")
             # Nextflow pipe failed: we return 1.
             # User should decide whether to halt the upstream
             # functions or not (maybe do some garbage collecting or so)
+            self.__v("Nextflow pipeline failed!")
             msg = f"Nextflow pipeline {self.project_name} failed! " \
                   f"Execute function returns 1."
             warnings.warn(msg)
             self.executed_with_success = False
             return 1
         else:  # everything is fine
-            self.__v("Nextflow pipeline failed!")
+            self.__v("Nextflow pipeline executed successfully")
             self.executed_with_success = True
             return 0
 
