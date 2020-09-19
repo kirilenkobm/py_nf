@@ -138,7 +138,7 @@ class Nextflow:
         # not local executor: requires extra check
         # each executor requires some binary to be accessible
         # for instance, slurm requires sbatch and lsf needs bsub
-        # TODO: handle ignite, kubernetes, awsbatch, tes and google-lifesciences
+        # TODO: handle ignite, kubernetes, awsbatch, tes and google-lifesciences, see issue #2
         if self.executor not in self.executor_to_depend.keys():
             msg = f"Executor {self.executor} is not supported, abort"
             raise NotImplementedError(msg)
@@ -187,6 +187,7 @@ class Nextflow:
     def __create_nf_script(self):
         """Create nextflow script and config file"""
         self.__v(f"Calling {inspect.currentframe()}")
+        self.__v(f"self.project_dir = {self.project_dir}")
         self.nextflow_script_path = os.path.abspath(os.path.join(self.project_dir, "script.nf"))
         self.nextflow_config_path = os.path.abspath(os.path.join(self.project_dir, "config.nf"))
         # write config file
@@ -222,6 +223,7 @@ class Nextflow:
 
     def execute(self, joblist, config_file=None):
         """Execute jobs in parallel."""
+        self.__v(f"Calling {inspect.currentframe()}")
         if not self.__nextflow_checked:
             self.__check_nextflow()
         os.mkdir(self.project_dir) if not os.path.isdir(self.project_dir) else None
@@ -229,16 +231,20 @@ class Nextflow:
         self.__create_nf_script()
         if config_file:  # in case user wants to execute with pre-defined config file
             self.nextflow_script_path = config_file
+        # TODO: add detach process feature (useful if user wants to execute several pipelines at once)
         cmd = f"{self.nextflow_exe} {self.nextflow_script_path} -c {self.nextflow_config_path}"
         self.executed_at = self._get_tmstmp()
+        self.__v(f"Executing command:\n{cmd}")
         rc = subprocess.call(cmd, shell=True, cwd=self.project_dir)
         # remove project files logic: if pipeline fails, remove_logs keep all files
         # in case of force_remove_logs we delete them anyway
         remove_files = self.force_remove_logs or (self.remove_logs and rc == 0)
         if remove_files:
+            self.__v(f"Removing temporary files at {self.project_dir}")
             shutil.rmtree(self.project_dir) if os.path.isdir(self.project_dir) else None
 
         if rc != 0:
+            self.__v("Nextflow pipeline executed successfully")
             # Nextflow pipe failed: we return 1.
             # User should decide whether to halt the upstream
             # functions or not (maybe do some garbage collecting or so)
@@ -248,6 +254,7 @@ class Nextflow:
             self.executed_with_success = False
             return 1
         else:  # everything is fine
+            self.__v("Nextflow pipeline failed!")
             self.executed_with_success = True
             return 0
 
@@ -258,6 +265,7 @@ class Nextflow:
         """
         self.__v(f"Calling {inspect.currentframe()}")
         self.joblist_path = os.path.abspath(os.path.join(self.project_dir, "joblist.txt"))
+        self.__v(f"Saving joblist to: {self.joblist_path}")
         if not isinstance(joblist, Iterable):  # must be a list or other iterable
             raise TypeError(f"Error! Joblist must be an iterable! Got {type(joblist)}")
         f = open(self.joblist_path, "w")
@@ -353,6 +361,7 @@ class Nextflow:
 def pick_executor():
     """Pick the best possible executor."""
     # TODO: if qsub is available then we need some extra procedure
+    # please see issue #1
     for executor, dep_bin in Nextflow.executor_to_depend.items():
         depend_available = shutil.which(dep_bin)
         if depend_available is None:
