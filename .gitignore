@@ -14,3 +14,4 @@ test_project_*/
 build/
 dist/
 py_nf.egg-info/
+token
