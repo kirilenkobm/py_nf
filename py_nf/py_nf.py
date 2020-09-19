@@ -243,6 +243,7 @@ class Nextflow:
             self.__v(f"Removing temporary files at {self.project_dir}")
             shutil.rmtree(self.project_dir) if os.path.isdir(self.project_dir) else None
 
+        # TODO: maybe add a param to not kill program if nf pipe fails (kill by default)
         if rc != 0:
             self.__v("Nextflow pipeline executed successfully")
             # Nextflow pipe failed: we return 1.
