@@ -33,12 +33,13 @@ nf_executable = install_nf_if_not_installed()
 
 ### Py_nf library
 
-To install py_nf itself do the following:
+To install py_nf just do:
 
 ```shell script
-python3 setup.py bdist_wheel
-pip3 install dist/py_nf-0.1.0-py3-none-any.whl
+pip3 install py_nf
 ```
+
+If it doesn't work please add --user flag.
 
 ## Usage
 
