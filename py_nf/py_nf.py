@@ -10,7 +10,7 @@ import inspect
 import warnings
 
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.1 alpha"
+__version__ = "0.2"
 
 # nextflow params constants
 NEXTFLOW_DEFAULT_EXE = "nextflow"
@@ -33,29 +33,48 @@ SWITCH_TO_LOCAL_PARAM = "switch_to_local"
 LOCAL = "local"
 NEXTFLOW_LOG_FILENAME = ".nextflow.log"
 
+DEFAULT_SCRIPT_NAME = "script.nf"
+DEFAULT_CONFIG_NAME = "config.nf"
+
 
 class Nextflow:
     """Nextflow wrapper."""
+
     # each executor requires some binary to be accessible
     # for instance, slurm requires sbatch and lsf needs bsub
-    executor_to_depend = {"slurm": "sbatch",
-                          "lsf": "bsub",
-                          "sge": "qsub",
-                          "psb": "qsub",
-                          "pbspro": "qsub",
-                          "moab": "msub",
-                          "nqsii": "qsub",
-                          "condor": "condor_submit"}
+    executor_to_depend = {
+        "slurm": "sbatch",
+        "lsf": "bsub",
+        "sge": "qsub",
+        "psb": "qsub",
+        "pbspro": "qsub",
+        "moab": "msub",
+        "nqsii": "qsub",
+        "condor": "condor_submit",
+    }
 
     def __init__(self, **kwargs):
         """Init nextflow wrapper."""
         # TODO: proper documentation of course
         # list of acceptable parameters
-        self.params_list = {EXECUTOR_PARAM, NEXTFLOW_EXE_PARAM, ERROR_STRATEGY_PARAM,
-                            MAX_RETRIES_PARAM, QUEUE_PARAM, MEMORY_PARAM, TIME_PARAM,
-                            CPUS_PARAM, QUEUE_SIZE_PARAM, REMOVE_LOGS_PARAM, WD_PARAM,
-                            PROJECT_NAME_PARAM, NO_NF_CHECK_PARAM, FORCE_REMOVE_LOGS_PARAM,
-                            SWITCH_TO_LOCAL_PARAM, VERBOSE}
+        self.params_list = {
+            EXECUTOR_PARAM,
+            NEXTFLOW_EXE_PARAM,
+            ERROR_STRATEGY_PARAM,
+            MAX_RETRIES_PARAM,
+            QUEUE_PARAM,
+            MEMORY_PARAM,
+            TIME_PARAM,
+            CPUS_PARAM,
+            QUEUE_SIZE_PARAM,
+            REMOVE_LOGS_PARAM,
+            WD_PARAM,
+            PROJECT_NAME_PARAM,
+            NO_NF_CHECK_PARAM,
+            FORCE_REMOVE_LOGS_PARAM,
+            SWITCH_TO_LOCAL_PARAM,
+            VERBOSE,
+        }
         self.verbosity_on = True if kwargs.get(VERBOSE) else False
         if kwargs.get(NEXTFLOW_EXE_PARAM):
             # in case if user provided a path to nextflow executable manually:
@@ -68,7 +87,9 @@ class Nextflow:
         dont_check_nf = kwargs.get(NO_NF_CHECK_PARAM, False)
         self.__check_nextflow() if dont_check_nf is False else None
         # set nextflow parameters
-        self.executor = kwargs.get(EXECUTOR_PARAM, LOCAL)  # local executor (CPU) is default
+        self.executor = kwargs.get(
+            EXECUTOR_PARAM, LOCAL
+        )  # local executor (CPU) is default
         # if user picked "slurm" on a machine without sbatch nextflow will raise an error
         # if "switch_to_local" value is True, py_nf will replace "slurm" to "local", if
         # there is no slurm
@@ -115,7 +136,9 @@ class Nextflow:
 
         Default value: nextflow_project_at_$timestamp.
         """
-        self.__v(f"Calling {inspect.currentframe()}\nwith params: project_name={project_name}")
+        self.__v(
+            f"Calling {inspect.currentframe()}\nwith params: project_name={project_name}"
+        )
         if project_name is None:
             # set default project name then
             timestamp = self._get_tmstmp()
@@ -153,28 +176,36 @@ class Nextflow:
         if self.switch_to_local:
             # if this flag set: just call with 'local' executor
             # warn user anyway
-            msg = f"Cannot call nextflow pipe with {self.executor} executor: " \
-                  f"command {depend_exe} is not available. Switching to 'local' executor."
+            msg = (
+                f"Cannot call nextflow pipe with {self.executor} executor: "
+                f"command {depend_exe} is not available. Switching to 'local' executor."
+            )
             warnings.warn(msg)
             self.executor = LOCAL
             return True
         # in this case we should terminate the program
-        err_msg = f"Cannot call nextflow pipeline with {self.executor} executor: " \
-                  f"command {depend_exe} is not available. Either call it on another " \
-                  f"machine or set switch_to_local parameter to True."
+        err_msg = (
+            f"Cannot call nextflow pipeline with {self.executor} executor: "
+            f"command {depend_exe} is not available. Either call it on another "
+            f"machine or set switch_to_local parameter to True."
+        )
         raise ValueError(err_msg)
 
     def __check_nextflow(self):
         """Check that nextflow is installed."""
-        self.__v(f"Calling {inspect.currentframe()}; self.nextflow_exe={self.nextflow_exe}")
+        self.__v(
+            f"Calling {inspect.currentframe()}; self.nextflow_exe={self.nextflow_exe}"
+        )
         self.__nextflow_checked = True
         cmd = f"{self.nextflow_exe} -v"
         nf_here = shutil.which(self.nextflow_exe)
         if nf_here:
             return True
-        err_msg = f"Nextflow installation not found." \
-                  f"Command {cmd} failed. Please find nextflow installation guide " \
-                  f"here: https://www.nextflow.io/"
+        err_msg = (
+            f"Nextflow installation not found."
+            f"Command {cmd} failed. Please find nextflow installation guide "
+            f"here: https://www.nextflow.io/"
+        )
         if nf_here is None:
             raise ChildProcessError(err_msg)
 
@@ -188,13 +219,19 @@ class Nextflow:
         """Create nextflow script and config file"""
         self.__v(f"Calling {inspect.currentframe()}")
         self.__v(f"self.project_dir = {self.project_dir}")
-        self.nextflow_script_path = os.path.abspath(os.path.join(self.project_dir, "script.nf"))
-        self.nextflow_config_path = os.path.abspath(os.path.join(self.project_dir, "config.nf"))
+        self.nextflow_script_path = os.path.abspath(
+            os.path.join(self.project_dir, DEFAULT_SCRIPT_NAME)
+        )
+        self.nextflow_config_path = os.path.abspath(
+            os.path.join(self.project_dir, DEFAULT_CONFIG_NAME)
+        )
         # write config file
         now = dt.now().isoformat()
         f = open(self.nextflow_config_path, "w")
         # TODO: depending on executor parameters list might differ
-        f.write(f"// automatically generated config file for project {self.project_name}\n")
+        f.write(
+            f"// automatically generated config file for project {self.project_name}\n"
+        )
         f.write(f"// at: {now}\n")
         f.write(f"process.executor = '{self.executor}'\n")
         f.write(f"process.queue = '{self.queue}'\n")
@@ -216,7 +253,7 @@ class Nextflow:
         f.write("\n")
         f.write("    input:\n")
         f.write("    val line from lines\n\n")
-        f.write("    \"${line}\"\n")
+        f.write('    "${line}"\n')
         f.write("}\n")
         f.close()
         self.__v(f"Created script at {self.nextflow_script_path}")
@@ -249,8 +286,10 @@ class Nextflow:
             # User should decide whether to halt the upstream
             # functions or not (maybe do some garbage collecting or so)
             self.__v("Nextflow pipeline failed!")
-            msg = f"Nextflow pipeline {self.project_name} failed! " \
-                  f"Execute function returns 1."
+            msg = (
+                f"Nextflow pipeline {self.project_name} failed! "
+                f"Execute function returns 1."
+            )
             warnings.warn(msg)
             self.executed_with_success = False
             return 1
@@ -265,7 +304,9 @@ class Nextflow:
         Joblist expected type: list of strings.
         """
         self.__v(f"Calling {inspect.currentframe()}")
-        self.joblist_path = os.path.abspath(os.path.join(self.project_dir, "joblist.txt"))
+        self.joblist_path = os.path.abspath(
+            os.path.join(self.project_dir, "joblist.txt")
+        )
         self.__v(f"Saving joblist to: {self.joblist_path}")
         if not isinstance(joblist, Iterable):  # must be a list or other iterable
             raise TypeError(f"Error! Joblist must be an iterable! Got {type(joblist)}")
@@ -287,7 +328,9 @@ class Nextflow:
             files_in_proj_dir = os.listdir(self.project_dir)
         else:  # no dir: no logs
             return None
-        nf_log_files = [f for f in files_in_proj_dir if f.startswith(NEXTFLOW_LOG_FILENAME)]
+        nf_log_files = [
+            f for f in files_in_proj_dir if f.startswith(NEXTFLOW_LOG_FILENAME)
+        ]
         if len(nf_log_files) == 0:
             # no logs: nothing to return
             return None
@@ -304,8 +347,10 @@ class Nextflow:
         # if we required the first one BUT there is no '.nextflow.log'
         # at least show a warning
         if first:
-            msg = "get_nf_log(): requested the first log but .nextflow.log not " \
-                  f"found in the {self.project_dir}"
+            msg = (
+                "get_nf_log(): requested the first log but .nextflow.log not "
+                f"found in the {self.project_dir}"
+            )
             warnings.warn(msg)
         # we are here: let's remove .nextflow.log for simplicity, other files can be split(".")
         # -> lets us to get a number
@@ -331,17 +376,19 @@ class Nextflow:
 
     def __repr__(self):
         """Show parameters."""
-        lines = ["<nf_py Nextflow wrapper>\n",
-                 f"project_name: {self.project_name}\n",
-                 f"nextflow executable: {self.nextflow_exe}\n",
-                 f"executor: {self.executor}\n",
-                 f"wd: {self.wd}\n",
-                 f"executed_success: {self.executed_with_success}\n",
-                 f"executed_at: {self.executed_at}\n",
-                 f"queue: {self.queue}\n",
-                 f"memory: {self.memory}\n",
-                 f"time: {self.time}\n",
-                 f"queue_size: {self.queue_size}\n"]
+        lines = [
+            "<nf_py Nextflow wrapper>\n",
+            f"project_name: {self.project_name}\n",
+            f"nextflow executable: {self.nextflow_exe}\n",
+            f"executor: {self.executor}\n",
+            f"wd: {self.wd}\n",
+            f"executed_success: {self.executed_with_success}\n",
+            f"executed_at: {self.executed_at}\n",
+            f"queue: {self.queue}\n",
+            f"memory: {self.memory}\n",
+            f"time: {self.time}\n",
+            f"queue_size: {self.queue_size}\n",
+        ]
         return "".join(lines)
 
     @staticmethod

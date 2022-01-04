@@ -8,6 +8,7 @@ from collections import Iterable
 LOCAL = "local"
 NEXTFLOW = "nextflow"
 
+
 def paths_to_abspaths_in_line(line):
     """Replace all relative paths to absolute paths in a string.
 
@@ -16,7 +17,9 @@ def paths_to_abspaths_in_line(line):
     /home/user/proj/script.py /home/user/proj/in/file1.txt /home/user/proj/out/file1.txt -v
     """
     if not isinstance(line, str):
-        err_msg = f"paths_to_abspaths_in_line expects a string as input, got {type(line)}"
+        err_msg = (
+            f"paths_to_abspaths_in_line expects a string as input, got {type(line)}"
+        )
         raise ValueError(err_msg)
     # command is a space-separated list of arguments, some of them are paths
     line_pieces = line.split()
@@ -50,7 +53,7 @@ def paths_to_abspaths_in_joblist(joblist):
 
 def install_nf_if_not_installed():
     """Install nextflow if it's not installed.
-    
+
     If already installed: return path to nextflow.
     If not: install and return abspath to installed NF.
     If impossible: raise an Error."""
