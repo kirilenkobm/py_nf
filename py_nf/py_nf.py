@@ -10,7 +10,10 @@ import inspect
 import warnings
 
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.2"
+CURRENT_DIR = os.path.dirname(__file__)
+with open(os.path.join(CURRENT_DIR, "VERSION"), "r") as f:
+    __version__ = f.read().rstrip()
+
 
 # nextflow params constants
 NEXTFLOW_DEFAULT_EXE = "nextflow"

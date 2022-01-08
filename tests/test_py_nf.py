@@ -25,9 +25,9 @@ def get_joblist(sample_num):
         exp_out_dir = os.path.join(test_path, "expected_output", "sample_1")
         for i in range(1, 5):
             in_out_filename = f"file_{i}.fa"
-            in_path = os.path.join(in_dir, in_out_filename)
-            out_path = os.path.join(out_dir, in_out_filename)
-            exp_out_path = os.path.join(exp_out_dir, in_out_filename)
+            in_path = os.path.abspath(os.path.join(in_dir, in_out_filename))
+            out_path = os.path.abspath(os.path.join(out_dir, in_out_filename))
+            exp_out_path = os.path.abspath(os.path.join(exp_out_dir, in_out_filename))
             cmd = f"python3 {sample_script} {in_path} {out_path}"
             jobs.append(cmd)
             out_files.append(out_path)
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         for project in projects:
             shutil.rmtree(project) if os.path.isdir(project) else None
         sys.exit("Cleaned")
-    print("Running test 1")
+    print("### Running test 1\n")
     nf_instance = Nextflow(project_name=project_name_1, executor="slurm", switch_to_local=True, verbose=True)
     joblist, to_check = get_joblist(1)
     abs_joblist = paths_to_abspaths_in_joblist(joblist)
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     # check that results are correct:
     assert(have_same_content(to_check))
     del nf_instance
-    print("Running test 2 -> should fail")
+    print("### Running test 2 -> should fail\n")
     project_name_1 = "test_project_2"
     exe = pick_executor()
     nf_instance = Nextflow(project_name=project_name_2, executor=exe, switch_to_local=True, verbose=True, max_retries=0)
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     assert(status != 0)
     print("Test 2: success (NF pipeline should fail)")
     del nf_instance
-    print("Running test 3 -> should fail")
+    print("### Running test 3 -> should fail\n")
     try:
         nf_instance = Nextflow(project_name=None, executor="non_existent")
     except NotImplementedError as err:
@@ -96,7 +96,7 @@ if __name__ == "__main__":
         print("Test 3 -> not raised an error -> failed")
         sys.exit(1)
     
-    print("Running test 4 (should fail)")
+    print("### Running test 4 (should fail)\n")
     try:
         nf_instance = Nextflow(project_name=None, executor="lsf")
     except ValueError as err:
