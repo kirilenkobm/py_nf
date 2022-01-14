@@ -12,7 +12,7 @@ import warnings
 
 
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 CURRENT_DIR = os.path.dirname(__file__)
 
 
