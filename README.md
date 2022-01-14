@@ -147,36 +147,44 @@ Controls Nextflow process queue parameter.
 To set "long" queue do:
 nf = Nextflow(queue="long").
 A list of available queues depends on your scheduler.
-6) *memory*, default "10G".
+6) *memory*, default "10".
 Amount of memory each process is allowed to use.
 Please find [here](https://www.nextflow.io/docs/latest/process.html#memory)
 how to format the memory amount.
-To set "memory" parameter to 100Gb do the following:
-nf = Nextflow(memory="100G").
-7) *time*, default "1h".
+To set "memory" parameter to 100 do the following:
+nf = Nextflow(memory="100", memory_units="GB").
+7) *memory_units*, default "GB"
+The parameter controls memory parameter units.
+For example, with --memory 3500 and --time_units MB the process will be limited to 3500 megabytes.
+The full list of available memory units is available at [here](https://www.nextflow.io/docs/latest/process.html#memory)
+8) *time*, default "1".
 This parameter controls how long a process is allowed to run.
 Please read formatting rules [here](https://www.nextflow.io/docs/latest/process.html#time).
 To set the time limit to 1 day:
 nf = Nextflow(time="1d").
-8) *cpus*, default 1.
+9) *time_units*, default "h"
+This parametes allows to specify the time value units.
+For example, with --time 11 and --time_units m the process will be limited to 11 minutes.
+The full list of available time units is available at [here](https://www.nextflow.io/docs/latest/process.html#time)
+10) *cpus*, default 1.
 Controls the number of CPUs required by each job.
 A usage example:
 nf = Nextflow(cpus=8).
-9) *queue_size*, default 100.
+11) *queue_size*, default 100.
 Controls nextflow process "queue_size" parameter.
 The number of tasks the executor will handle in a parallel manner.
-10) *remove_logs*, default False.
+12) *remove_logs*, default False.
 If set to True and Nextflow executes jobs successfully, all intermediate and log files
 will be removed.
 This might be important because Nextflow produces a whole bunch of files which might
 be not welcome at some file systems.
 To set this parameter do the following:
 nf = Nextflow(remove_logs=True).
-11) *force_remove_logs*, default False.
+13) *force_remove_logs*, default False.
 The only difference with "remove_logs" parameter is that Nextflow logs and intermediate 
 files will be removed in any case.
 nf = Nextflow(force_remove_logs=True).
-12) *wd*, cwd is default (directory you call the script from).
+14) *wd*, cwd is default (directory you call the script from).
 This is the directory where the library creates the project directory.
 Then the library saves nextflow script, configuration and all intermediate files to
 the created project directory.
@@ -185,23 +193,27 @@ nf = Nextflow(wd="/tmp/project/").
 Might be useful if the filesystem where you run your pipeline doesn't support file
 locks and you have to run the nextflow pipeline outside the filesystem.
 Please see Troubleshooting section case 1 for details.
-13) *project_name*, default: "nextflow_project_at_{timestamp}".
+15) *project_name*, default: "nextflow_project_at_{timestamp}".
 Basically a project directory name where the library keeps all nextflow-related data and files.
 nf = Nextflow(project_name="test_project").
 If not set, the library will automatically generate the project name using timestamp.
-14) *no_nf_check*, default False.
+16) *no_nf_check*, default False.
 Normally the library checks whether there is an accessible nextflow executable and
 raises an error if that's not the case.
 If you set it to True:
 nf = Nextflow(no_nf_check=True)
 then library will not check for that on the stage of Nextflow class initiation.
-15) *switch_to_local*, default False.
+17) *switch_to_local*, default False.
 Normally the library checks, whether the executor which the user set is accessible.
 For instance, if user set the "executor" parameter to "slurm", but there is not "sbatch"
 executable accessible, then program raises an error.
 However, if you set switch_to_local parameter:
 nf = Nextflow(switch_to_local=True),
 the library will just replace "slurm" executor to "local".
+18) *retry_increase_mem*, default False
+In case of job failure, retry with x2 memory.
+19) *retry_increase_time*, default False
+In case of job failure, retry with x2 time.
 
 ### execute function parameters
 

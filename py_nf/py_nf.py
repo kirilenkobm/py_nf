@@ -1,4 +1,5 @@
 """Py-nf core functionality."""
+import re
 import subprocess
 import os
 import sys
@@ -24,6 +25,8 @@ MAX_RETRIES_PARAM = "max_retries"
 QUEUE_PARAM = "queue"
 MEMORY_PARAM = "memory"
 TIME_PARAM = "time"
+MEMORY_UNITS_PARAM = "memory_units"
+TIME_UNITS_PARAM = "time_units"
 CPUS_PARAM = "cpus"
 VERBOSE = "verbose"
 QUEUE_SIZE_PARAM = "queue_size"
@@ -41,6 +44,12 @@ NEXTFLOW_LOG_FILENAME = ".nextflow.log"
 DEFAULT_SCRIPT_NAME = "script.nf"
 DEFAULT_CONFIG_NAME = "config.nf"
 
+AVAILABLE_MEMORY_UNITS = {"B", "KB", "MB", "GB", "TB"}
+AVAILABLE_TIME_UNITS = {"ms", "milli", "millis",
+                        "s", "sec", "seconds",
+                        "m", "min", "minute", "minutes",
+                        "h", "hour", "hours",
+                        "d", "day", "days"}
 
 class Nextflow:
     """Nextflow wrapper."""
@@ -71,7 +80,9 @@ class Nextflow:
             RETRY_INCREASE_TIME_PARAM,
             QUEUE_PARAM,
             MEMORY_PARAM,
+            MEMORY_UNITS_PARAM,
             TIME_PARAM,
+            TIME_UNITS_PARAM,
             CPUS_PARAM,
             QUEUE_SIZE_PARAM,
             REMOVE_LOGS_PARAM,
@@ -105,8 +116,9 @@ class Nextflow:
         self.error_strategy = kwargs.get(ERROR_STRATEGY_PARAM, "retry")
         self.max_retries = kwargs.get(MAX_RETRIES_PARAM, 3)
         self.queue = kwargs.get(QUEUE_PARAM, "batch")
-        self.memory = kwargs.get(MEMORY_PARAM, "10.GB")
-        self.time = kwargs.get(TIME_PARAM, "1.h")
+        # TODO: fix this, must always be {number}.{units}
+        self.memory = self.__set_memory(kwargs.get(MEMORY_PARAM, "10"), kwargs.get(MEMORY_UNITS_PARAM, "GB"))
+        self.time = self.__set_time(kwargs.get(TIME_PARAM, "1"), kwargs.get(TIME_UNITS_PARAM, "h"))
         self.cpus = kwargs.get(CPUS_PARAM, 1)
         self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)
         self.retry_increase_mem = kwargs.get(RETRY_INCREASE_MEMORY_PARAM, False)
@@ -135,6 +147,20 @@ class Nextflow:
             msg = f"py_nf: Argument {elem} is not supported."
             warnings.warn(msg)
         self.__v(f"Initiated py_nf with the following params:\n{self.__repr__()}")
+
+    def __set_memory(self, quantity, units):
+        """Get memory parameter as a string."""
+        if units not in AVAILABLE_MEMORY_UNITS:
+            raise ValueError(f"Invalid {MEMORY_UNITS_PARAM} parameter {units}, "
+                             f"please select one of these:\n{AVAILABLE_MEMORY_UNITS}")
+        return f"{quantity}.{units}"
+    
+    def __set_time(self, quantity, units):
+        """Get memory parameter as a string."""
+        if units not in AVAILABLE_TIME_UNITS:
+            raise ValueError(f"Invalid {TIME_UNITS_PARAM} parameter {units}, "
+                             f"please select one of these:\n{AVAILABLE_TIME_UNITS}")
+        return f"{quantity}.{units}"
 
     def __v(self, msg):
         """Verbosity message."""
