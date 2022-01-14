@@ -5,8 +5,9 @@ import sys
 import os
 import shutil
 import pytest
+
 # a temporary solution for import error:
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from py_nf.py_nf import Nextflow
 from py_nf.py_nf import pick_executor
 from py_nf.utils import paths_to_abspaths_in_joblist
@@ -67,23 +68,35 @@ if __name__ == "__main__":
             shutil.rmtree(project) if os.path.isdir(project) else None
         sys.exit("Cleaned")
     print("### Running test 1\n")
-    nf_instance = Nextflow(project_name=project_name_1, executor="slurm", switch_to_local=True, verbose=True)
+    nf_instance = Nextflow(
+        project_name=project_name_1,
+        executor="slurm",
+        switch_to_local=True,
+        verbose=True,
+    )
     joblist, to_check = get_joblist(1)
     abs_joblist = paths_to_abspaths_in_joblist(joblist)
     status = nf_instance.execute(abs_joblist)
     # if status != 0: nextflow subprocess crashed
     # if status == 0 -> nextflow process finished without errors
-    assert(status == 0)
+    assert status == 0
     # check that results are correct:
-    assert(have_same_content(to_check))
+    assert have_same_content(to_check)
     del nf_instance
     print("### Running test 2 -> should fail\n")
     project_name_1 = "test_project_2"
     exe = pick_executor()
-    nf_instance = Nextflow(project_name=project_name_2, executor=exe, switch_to_local=True, verbose=True, max_retries=0)
+    nf_instance = Nextflow(
+        project_name=project_name_2,
+        executor=exe,
+        switch_to_local=True,
+        verbose=True,
+        max_retries=3,
+        retry_increase_mem=True,
+    )
     joblist_2, _ = get_joblist(2)
     status = nf_instance.execute(joblist_2)
-    assert(status != 0)
+    assert status != 0
     print("Test 2: success (NF pipeline should fail)")
     del nf_instance
     print("### Running test 3 -> should fail\n")
@@ -95,7 +108,7 @@ if __name__ == "__main__":
     else:
         print("Test 3 -> not raised an error -> failed")
         sys.exit(1)
-    
+
     print("### Running test 4 (should fail)\n")
     try:
         nf_instance = Nextflow(project_name=None, executor="lsf")

@@ -34,6 +34,7 @@ PROJECT_NAME_PARAM = "project_name"
 NO_NF_CHECK_PARAM = "no_nf_check"
 SWITCH_TO_LOCAL_PARAM = "switch_to_local"
 LOCAL = "local"
+RETRY_INCREASE_MEMORY_PARAM = "retry_increase_mem"
 NEXTFLOW_LOG_FILENAME = ".nextflow.log"
 
 DEFAULT_SCRIPT_NAME = "script.nf"
@@ -65,6 +66,7 @@ class Nextflow:
             NEXTFLOW_EXE_PARAM,
             ERROR_STRATEGY_PARAM,
             MAX_RETRIES_PARAM,
+            RETRY_INCREASE_MEMORY_PARAM,
             QUEUE_PARAM,
             MEMORY_PARAM,
             TIME_PARAM,
@@ -105,6 +107,7 @@ class Nextflow:
         self.time = kwargs.get(TIME_PARAM, "1h")
         self.cpus = kwargs.get(CPUS_PARAM, 1)
         self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)
+        self.retry_increase_mem = kwargs.get(RETRY_INCREASE_MEMORY_PARAM, False)
         # set directory parameters
         # remove logs will remove project directory only in case of successful pipe execution
         # force_remove_logs will remove this anyway
@@ -231,24 +234,38 @@ class Nextflow:
         # write config file
         now = dt.now().isoformat()
         f = open(self.nextflow_config_path, "w")
+
         # TODO: depending on executor parameters list might differ
         f.write(
             f"// automatically generated config file for project {self.project_name}\n"
         )
         f.write(f"// at: {now}\n")
-        f.write(f"process.executor = '{self.executor}'\n")
-        f.write(f"process.queue = '{self.queue}'\n")
-        f.write(f"process.memory = '{self.memory}'\n")
-        f.write(f"process.time = '{self.time}'\n")
-        f.write(f"process.cpus = '{self.cpus}'\n")
+        f.write("process {\n")
+        f.write(f"    executor = '{self.executor}'\n")
+        f.write(f"    queue = '{self.queue}'\n")
+        f.write(f"    memory = '{self.memory}'\n")
+        f.write(f"    time = '{self.time}'\n")
+        f.write(f"    cpus = '{self.cpus}'\n")
+
+        # with label config extensions
+        if self.retry_increase_mem:
+            # add extension to increase memory each time pipeline fails
+            f.write("    withLabel: retry_increase_mem {\n")
+            f.write(f"        memory = {{ {self.memory} * task.attempt }}\n")
+            f.write(f"        errorStrategy = 'retry'\n")
+            f.write("    }\n")
+
+        f.write("}\n")
         f.close()
         self.__v(f"Created config file at {self.nextflow_config_path}")
+
         # write script
         f = open(self.nextflow_script_path, "w")
         f.write(f"// automatically generated script for project {self.project_name}\n")
         f.write(f"// at: {now}\n")
         f.write(f"joblist_path = '{self.joblist_path}'\n")
         f.write(f"joblist = file(joblist_path)\n")
+        f.write(f"label 'retry_increasing_mem'\n") if self.retry_increase_mem > 1 else None
         f.write(f"lines = Channel.from(joblist.readLines())\n\n")
         f.write("process execute_jobs {\n")
         f.write(f"    errorStrategy '{self.error_strategy}'\n")
