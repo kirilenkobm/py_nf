@@ -65,6 +65,13 @@ class Nextflow:
         "moab": "msub",
         "nqsii": "qsub",
         "condor": "condor_submit",
+        # I didn't find any known binaries to check
+        # whether they are valud upfront
+        "ignite": None,
+        "kubernetes": None,
+        "awsbatch": None,
+        "google-lifesciences": None,
+        "tes": None,
     }
 
     def __init__(self, **kwargs):
@@ -203,6 +210,9 @@ class Nextflow:
         # we have a supported executor, need to check whether the required
         # executable exists
         depend_exe = self.executor_to_depend[self.executor]
+        if depend_exe is None:
+            # no way to check, just return True -> let the nextflow and user to figure this out
+            return True
         depend_exists = shutil.which(depend_exe)
         if depend_exists:
             # this is fine, let's go further
@@ -470,6 +480,9 @@ def pick_executor():
     # TODO: if qsub is available then we need some extra procedure
     # please see issue #1
     for executor, dep_bin in Nextflow.executor_to_depend.items():
+        if dep_bin is None:
+            # here we cannot say for sure
+            continue
         depend_available = shutil.which(dep_bin)
         if depend_available is None:
             continue
