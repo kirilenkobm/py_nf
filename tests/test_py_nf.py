@@ -93,6 +93,7 @@ if __name__ == "__main__":
         verbose=True,
         max_retries=3,
         retry_increase_mem=True,
+        retry_increase_time=True
     )
     joblist_2, _ = get_joblist(2)
     status = nf_instance.execute(joblist_2)

@@ -105,8 +105,8 @@ class Nextflow:
         self.error_strategy = kwargs.get(ERROR_STRATEGY_PARAM, "retry")
         self.max_retries = kwargs.get(MAX_RETRIES_PARAM, 3)
         self.queue = kwargs.get(QUEUE_PARAM, "batch")
-        self.memory = kwargs.get(MEMORY_PARAM, "10G")
-        self.time = kwargs.get(TIME_PARAM, "1h")
+        self.memory = kwargs.get(MEMORY_PARAM, "10.GB")
+        self.time = kwargs.get(TIME_PARAM, "1.h")
         self.cpus = kwargs.get(CPUS_PARAM, 1)
         self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)
         self.retry_increase_mem = kwargs.get(RETRY_INCREASE_MEMORY_PARAM, False)
@@ -255,7 +255,7 @@ class Nextflow:
             # add extension to increase memory each time pipeline fails
             f.write("\n")
             f.write("    withLabel: retry_increase_mem {\n")
-            f.write(f"        memory = {{ {self.memory} * task.attempt }}\n")
+            f.write(f"        memory = {{{self.memory} * task.attempt}}\n")
             f.write(f"        errorStrategy = 'retry'\n")
             f.write("    }\n")
 
@@ -263,7 +263,7 @@ class Nextflow:
             # add extension to increase time each time pipeline fails
             f.write("\n")
             f.write("    withLabel: retry_increase_time {\n")
-            f.write(f"        time = {{ {self.time} * task.attempt }}\n")
+            f.write(f"        time = {{{self.time} * task.attempt}}\n")
             f.write(f"        errorStrategy = 'retry'\n")
             f.write("    }\n")
 
@@ -277,12 +277,12 @@ class Nextflow:
         f.write(f"// at: {now}\n")
         f.write(f"joblist_path = '{self.joblist_path}'\n")
         f.write(f"joblist = file(joblist_path)\n")
-        f.write(f"label 'retry_increasing_mem'\n") if self.retry_increase_mem is True else None
-        f.write(f"label 'retry_increase_time'\n") if self.retry_increase_time is True else None
         f.write(f"lines = Channel.from(joblist.readLines())\n\n")
         f.write("process execute_jobs {\n")
         f.write(f"    errorStrategy '{self.error_strategy}'\n")
         f.write(f"    maxRetries {self.max_retries}\n")
+        f.write(f"    label 'retry_increasing_mem'\n") if self.retry_increase_mem is True else None
+        f.write(f"    label 'retry_increase_time'\n") if self.retry_increase_time is True else None
         f.write("\n")
         f.write("    input:\n")
         f.write("    val line from lines\n\n")
