@@ -8,11 +8,10 @@ from collections import Iterable
 import shutil
 import inspect
 import warnings
+from version import __version__
 
 __author__ = "Bogdan Kirilenko"
 CURRENT_DIR = os.path.dirname(__file__)
-with open(os.path.join(CURRENT_DIR, "VERSION"), "r") as f:
-    __version__ = f.read().rstrip()
 
 
 # nextflow params constants

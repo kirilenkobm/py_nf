@@ -12,6 +12,7 @@ Install from test-pypi:
 pip install -i https://test.pypi.org/simple/ py-nf==0.1.0 --user
 """
 from setuptools import find_packages, setup
+from py_nf.version import __version__
 import os
 
 CURRENT_DIR = os.path.dirname(__file__)
@@ -19,10 +20,6 @@ __author__ = "Bogdan Kirilenko"
 
 with open("README.md", "r") as f:
     long_description = f.read()
-
-with open(os.path.join(CURRENT_DIR, "py_nf", "VERSION"), "r") as f:
-        __version__ = f.read().strip()
-
 
 classifiers=[
     "Programming Language :: Python :: 3",
