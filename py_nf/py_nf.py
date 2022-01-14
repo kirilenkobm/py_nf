@@ -8,9 +8,10 @@ from collections import Iterable
 import shutil
 import inspect
 import warnings
-from version import __version__
+
 
 __author__ = "Bogdan Kirilenko"
+__version__ = "0.2.4"
 CURRENT_DIR = os.path.dirname(__file__)
 
 
@@ -34,6 +35,7 @@ NO_NF_CHECK_PARAM = "no_nf_check"
 SWITCH_TO_LOCAL_PARAM = "switch_to_local"
 LOCAL = "local"
 RETRY_INCREASE_MEMORY_PARAM = "retry_increase_mem"
+RETRY_INCREASE_TIME_PARAM = "retry_increase_time"
 NEXTFLOW_LOG_FILENAME = ".nextflow.log"
 
 DEFAULT_SCRIPT_NAME = "script.nf"
@@ -66,6 +68,7 @@ class Nextflow:
             ERROR_STRATEGY_PARAM,
             MAX_RETRIES_PARAM,
             RETRY_INCREASE_MEMORY_PARAM,
+            RETRY_INCREASE_TIME_PARAM,
             QUEUE_PARAM,
             MEMORY_PARAM,
             TIME_PARAM,
@@ -107,6 +110,7 @@ class Nextflow:
         self.cpus = kwargs.get(CPUS_PARAM, 1)
         self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)
         self.retry_increase_mem = kwargs.get(RETRY_INCREASE_MEMORY_PARAM, False)
+        self.retry_increase_time = kwargs.get(RETRY_INCREASE_TIME_PARAM, False)
         # set directory parameters
         # remove logs will remove project directory only in case of successful pipe execution
         # force_remove_logs will remove this anyway
@@ -249,8 +253,17 @@ class Nextflow:
         # with label config extensions
         if self.retry_increase_mem:
             # add extension to increase memory each time pipeline fails
+            f.write("\n")
             f.write("    withLabel: retry_increase_mem {\n")
             f.write(f"        memory = {{ {self.memory} * task.attempt }}\n")
+            f.write(f"        errorStrategy = 'retry'\n")
+            f.write("    }\n")
+
+        if self.retry_increase_time:
+            # add extension to increase time each time pipeline fails
+            f.write("\n")
+            f.write("    withLabel: retry_increase_time {\n")
+            f.write(f"        time = {{ {self.time} * task.attempt }}\n")
             f.write(f"        errorStrategy = 'retry'\n")
             f.write("    }\n")
 
@@ -264,7 +277,8 @@ class Nextflow:
         f.write(f"// at: {now}\n")
         f.write(f"joblist_path = '{self.joblist_path}'\n")
         f.write(f"joblist = file(joblist_path)\n")
-        f.write(f"label 'retry_increasing_mem'\n") if self.retry_increase_mem > 1 else None
+        f.write(f"label 'retry_increasing_mem'\n") if self.retry_increase_mem is True else None
+        f.write(f"label 'retry_increase_time'\n") if self.retry_increase_time is True else None
         f.write(f"lines = Channel.from(joblist.readLines())\n\n")
         f.write("process execute_jobs {\n")
         f.write(f"    errorStrategy '{self.error_strategy}'\n")

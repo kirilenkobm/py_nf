@@ -12,11 +12,12 @@ Install from test-pypi:
 pip install -i https://test.pypi.org/simple/ py-nf==0.1.0 --user
 """
 from setuptools import find_packages, setup
-from py_nf.version import __version__
 import os
 
 CURRENT_DIR = os.path.dirname(__file__)
 __author__ = "Bogdan Kirilenko"
+__version__ = "0.2.4"
+
 
 with open("README.md", "r") as f:
     long_description = f.read()
