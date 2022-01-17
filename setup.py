@@ -16,7 +16,7 @@ import os
 
 CURRENT_DIR = os.path.dirname(__file__)
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 
 
 with open("README.md", "r") as f:
