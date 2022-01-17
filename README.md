@@ -214,6 +214,9 @@ the library will just replace "slurm" executor to "local".
 In case of job failure, retry with x2 memory.
 19) *retry_increase_time*, default False
 In case of job failure, retry with x2 time.
+20) *executor_queuesize*, default 100
+Controls executor.queueSize parameter
+
 
 ### execute function parameters
 
