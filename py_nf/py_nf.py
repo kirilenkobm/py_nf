@@ -33,6 +33,7 @@ QUEUE_SIZE_PARAM = "queue_size"
 REMOVE_LOGS_PARAM = "remove_logs"
 FORCE_REMOVE_LOGS_PARAM = "force_remove_logs"
 WD_PARAM = "wd"
+EXECUTOR_QUEUE_SIZE = "executor_queuesize"
 PROJECT_NAME_PARAM = "project_name"
 NO_NF_CHECK_PARAM = "no_nf_check"
 SWITCH_TO_LOCAL_PARAM = "switch_to_local"
@@ -92,6 +93,7 @@ class Nextflow:
             TIME_UNITS_PARAM,
             CPUS_PARAM,
             QUEUE_SIZE_PARAM,
+            EXECUTOR_QUEUE_SIZE,
             REMOVE_LOGS_PARAM,
             WD_PARAM,
             PROJECT_NAME_PARAM,
@@ -130,6 +132,7 @@ class Nextflow:
         self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)
         self.retry_increase_mem = kwargs.get(RETRY_INCREASE_MEMORY_PARAM, False)
         self.retry_increase_time = kwargs.get(RETRY_INCREASE_TIME_PARAM, False)
+        self.executor_queuesize = kwargs.get(EXECUTOR_QUEUE_SIZE, None)
         # set directory parameters
         # remove logs will remove project directory only in case of successful pipe execution
         # force_remove_logs will remove this anyway
@@ -304,6 +307,8 @@ class Nextflow:
             f.write("    }\n")
 
         f.write("}\n")
+        if self.executor_queuesize:
+            f.write(f"executor.queueSize = {self.executor_queuesize}\n")
         f.close()
         self.__v(f"Created config file at {self.nextflow_config_path}")
 
