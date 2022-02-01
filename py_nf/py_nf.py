@@ -12,7 +12,7 @@ import warnings
 
 
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.2.6"
+__version__ = "0.2.7"
 CURRENT_DIR = os.path.dirname(__file__)
 
 
@@ -129,7 +129,7 @@ class Nextflow:
         self.memory = self.__set_memory(kwargs.get(MEMORY_PARAM, "10"), kwargs.get(MEMORY_UNITS_PARAM, "GB"))
         self.time = self.__set_time(kwargs.get(TIME_PARAM, "1"), kwargs.get(TIME_UNITS_PARAM, "h"))
         self.cpus = kwargs.get(CPUS_PARAM, 1)
-        self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)
+        self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)  # deprecate this, duplicate of EXECUTOR_QUEUE_SIZE
         self.retry_increase_mem = kwargs.get(RETRY_INCREASE_MEMORY_PARAM, False)
         self.retry_increase_time = kwargs.get(RETRY_INCREASE_TIME_PARAM, False)
         self.executor_queuesize = kwargs.get(EXECUTOR_QUEUE_SIZE, None)
