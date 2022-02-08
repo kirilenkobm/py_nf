@@ -216,6 +216,11 @@ In case of job failure, retry with x2 memory.
 In case of job failure, retry with x2 time.
 20) *executor_queuesize*, default 100
 Controls executor.queueSize parameter
+21) *cluster_options*, default None
+Controls nextflow clusterOptions parameter. A string to extend scheduler call. Please see:
+https://www.nextflow.io/docs/latest/process.html#process-clusteroptions
+[clusterOptions parameter](https://www.nextflow.io/docs/latest/process.html#process-clusteroptions)
+Option example: "-S /bin/bash -l mem_free=20G -q all.q@compute-0-${key}"
 
 
 ### execute function parameters

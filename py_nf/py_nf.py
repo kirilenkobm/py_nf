@@ -12,7 +12,7 @@ import warnings
 
 
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.2.7"
+__version__ = "0.3.0"
 CURRENT_DIR = os.path.dirname(__file__)
 
 
@@ -40,6 +40,8 @@ SWITCH_TO_LOCAL_PARAM = "switch_to_local"
 LOCAL = "local"
 RETRY_INCREASE_MEMORY_PARAM = "retry_increase_mem"
 RETRY_INCREASE_TIME_PARAM = "retry_increase_time"
+PARTITION_PARAM = "partition"
+CLUSTER_OPTIONS_PARAM = "cluster_options"
 NEXTFLOW_LOG_FILENAME = ".nextflow.log"
 
 DEFAULT_SCRIPT_NAME = "script.nf"
@@ -101,6 +103,7 @@ class Nextflow:
             FORCE_REMOVE_LOGS_PARAM,
             SWITCH_TO_LOCAL_PARAM,
             VERBOSE,
+            CLUSTER_OPTIONS_PARAM,
         }
         self.verbosity_on = True if kwargs.get(VERBOSE) else False
         if kwargs.get(NEXTFLOW_EXE_PARAM):
@@ -129,7 +132,7 @@ class Nextflow:
         self.memory = self.__set_memory(kwargs.get(MEMORY_PARAM, "10"), kwargs.get(MEMORY_UNITS_PARAM, "GB"))
         self.time = self.__set_time(kwargs.get(TIME_PARAM, "1"), kwargs.get(TIME_UNITS_PARAM, "h"))
         self.cpus = kwargs.get(CPUS_PARAM, 1)
-        self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)  # deprecate this, duplicate of EXECUTOR_QUEUE_SIZE
+        # self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)  # deprecate this, duplicate of EXECUTOR_QUEUE_SIZE
         self.retry_increase_mem = kwargs.get(RETRY_INCREASE_MEMORY_PARAM, False)
         self.retry_increase_time = kwargs.get(RETRY_INCREASE_TIME_PARAM, False)
         self.executor_queuesize = kwargs.get(EXECUTOR_QUEUE_SIZE, None)
@@ -140,6 +143,7 @@ class Nextflow:
         self.force_remove_logs = kwargs.get(FORCE_REMOVE_LOGS_PARAM, False)
         wd = os.getcwd()  # if we like to run nextflow from some specific directory
         self.wd = kwargs.get(WD_PARAM, wd)
+        self.cluster_options = kwargs.get(CLUSTER_OPTIONS_PARAM, None)
         self.__check_dir_exists(self.wd)
         self.project_name = None
         self.project_dir = None
@@ -154,8 +158,11 @@ class Nextflow:
         # show warnings if user provided not supported arguments
         not_acceptable_args = set(kwargs.keys()).difference(self.params_list)
         for elem in not_acceptable_args:
+            # TODO: maybe crash then?
             msg = f"py_nf: Argument {elem} is not supported."
             warnings.warn(msg)
+        if len(not_acceptable_args) > 0:
+            warnings.warn("### Please find a list of supported options in the README.md")
         self.__v(f"Initiated py_nf with the following params:\n{self.__repr__()}")
 
     def __set_memory(self, quantity, units):
@@ -322,9 +329,13 @@ class Nextflow:
         f.write("process execute_jobs {\n")
         f.write(f"    errorStrategy '{self.error_strategy}'\n")
         f.write(f"    maxRetries {self.max_retries}\n")
+        f.write("\n")
+        # optional parameters:
+        f.write(f"    clusterOptions \"{self.cluster_options}\"") if self.cluster_options else None
         f.write(f"    label 'retry_increasing_mem'\n") if self.retry_increase_mem is True else None
         f.write(f"    label 'retry_increase_time'\n") if self.retry_increase_time is True else None
         f.write("\n")
+        # calling the jobs itself:
         f.write("    input:\n")
         f.write("    val line from lines\n\n")
         f.write('    "${line}"\n')
