@@ -12,7 +12,7 @@ import warnings
 
 
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 CURRENT_DIR = os.path.dirname(__file__)
 
 
@@ -29,11 +29,10 @@ MEMORY_UNITS_PARAM = "memory_units"
 TIME_UNITS_PARAM = "time_units"
 CPUS_PARAM = "cpus"
 VERBOSE = "verbose"
-QUEUE_SIZE_PARAM = "queue_size"
 REMOVE_LOGS_PARAM = "remove_logs"
 FORCE_REMOVE_LOGS_PARAM = "force_remove_logs"
 WD_PARAM = "wd"
-EXECUTOR_QUEUE_SIZE = "executor_queuesize"
+EXECUTOR_QUEUE_SIZE_PARAM = "executor_queuesize"
 PROJECT_NAME_PARAM = "project_name"
 NO_NF_CHECK_PARAM = "no_nf_check"
 SWITCH_TO_LOCAL_PARAM = "switch_to_local"
@@ -94,8 +93,7 @@ class Nextflow:
             TIME_PARAM,
             TIME_UNITS_PARAM,
             CPUS_PARAM,
-            QUEUE_SIZE_PARAM,
-            EXECUTOR_QUEUE_SIZE,
+            EXECUTOR_QUEUE_SIZE_PARAM,
             REMOVE_LOGS_PARAM,
             WD_PARAM,
             PROJECT_NAME_PARAM,
@@ -132,10 +130,9 @@ class Nextflow:
         self.memory = self.__set_memory(kwargs.get(MEMORY_PARAM, "10"), kwargs.get(MEMORY_UNITS_PARAM, "GB"))
         self.time = self.__set_time(kwargs.get(TIME_PARAM, "1"), kwargs.get(TIME_UNITS_PARAM, "h"))
         self.cpus = kwargs.get(CPUS_PARAM, 1)
-        # self.queue_size = kwargs.get(QUEUE_SIZE_PARAM, 100)  # deprecate this, duplicate of EXECUTOR_QUEUE_SIZE
         self.retry_increase_mem = kwargs.get(RETRY_INCREASE_MEMORY_PARAM, False)
         self.retry_increase_time = kwargs.get(RETRY_INCREASE_TIME_PARAM, False)
-        self.executor_queuesize = kwargs.get(EXECUTOR_QUEUE_SIZE, None)
+        self.executor_queuesize = kwargs.get(EXECUTOR_QUEUE_SIZE_PARAM, None)
         # set directory parameters
         # remove logs will remove project directory only in case of successful pipe execution
         # force_remove_logs will remove this anyway
@@ -331,7 +328,7 @@ class Nextflow:
         f.write(f"    maxRetries {self.max_retries}\n")
         f.write("\n")
         # optional parameters:
-        f.write(f"    clusterOptions \"{self.cluster_options}\"") if self.cluster_options else None
+        f.write(f"    clusterOptions \"{self.cluster_options}\"\n") if self.cluster_options else None
         f.write(f"    label 'retry_increasing_mem'\n") if self.retry_increase_mem is True else None
         f.write(f"    label 'retry_increase_time'\n") if self.retry_increase_time is True else None
         f.write("\n")
@@ -472,7 +469,7 @@ class Nextflow:
             f"queue: {self.queue}\n",
             f"memory: {self.memory}\n",
             f"time: {self.time}\n",
-            f"queue_size: {self.queue_size}\n",
+            f"queue_size: {self.executor_queuesize}\n",
         ]
         return "".join(lines)
 
