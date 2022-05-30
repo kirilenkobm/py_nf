@@ -62,7 +62,7 @@ class Nextflow:
         "slurm": "sbatch",
         "lsf": "bsub",
         "sge": "qsub",
-        "psb": "qsub",
+        "pbs": "qsub",
         "pbspro": "qsub",
         "moab": "msub",
         "nqsii": "qsub",
