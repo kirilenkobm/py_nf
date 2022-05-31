@@ -9,10 +9,10 @@ from collections import Iterable
 import shutil
 import inspect
 import warnings
+from .version import __version__
 
 
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.3.1"
 CURRENT_DIR = os.path.dirname(__file__)
 
 
@@ -36,6 +36,7 @@ EXECUTOR_QUEUE_SIZE_PARAM = "executor_queuesize"
 PROJECT_NAME_PARAM = "project_name"
 NO_NF_CHECK_PARAM = "no_nf_check"
 SWITCH_TO_LOCAL_PARAM = "switch_to_local"
+ALREADY_EXISING_CONFIG = "predef_config"
 LOCAL = "local"
 RETRY_INCREASE_MEMORY_PARAM = "retry_increase_mem"
 RETRY_INCREASE_TIME_PARAM = "retry_increase_time"
@@ -152,6 +153,7 @@ class Nextflow:
         self.nextflow_config_path = None
         self.executed_with_success = None
         self.executed_at = "N/A"
+
         # show warnings if user provided not supported arguments
         not_acceptable_args = set(kwargs.keys()).difference(self.params_list)
         for elem in not_acceptable_args:
@@ -267,17 +269,14 @@ class Nextflow:
         if not os.path.isdir(directory):
             raise OSError(f"Error! Directory {directory} does not exist!")
 
-    def __create_nf_script(self):
-        """Create nextflow script and config file"""
+    def __create_config_file(self, config_exists=False):
         self.__v(f"Calling {inspect.currentframe()}")
-        self.__v(f"self.project_dir = {self.project_dir}")
-        self.nextflow_script_path = os.path.abspath(
-            os.path.join(self.project_dir, DEFAULT_SCRIPT_NAME)
-        )
+        if config_exists:
+            # in this case no need to create any additional config files
+            return
         self.nextflow_config_path = os.path.abspath(
             os.path.join(self.project_dir, DEFAULT_CONFIG_NAME)
         )
-        # write config file
         now = dt.now().isoformat()
         f = open(self.nextflow_config_path, "w")
 
@@ -293,7 +292,7 @@ class Nextflow:
         f.write(f"    time = '{self.time}'\n")
         f.write(f"    cpus = '{self.cpus}'\n")
 
-        # with label config extensions
+                # with label config extensions
         if self.retry_increase_mem:
             # add extension to increase memory each time pipeline fails
             f.write("\n")
@@ -311,10 +310,21 @@ class Nextflow:
             f.write("    }\n")
 
         f.write("}\n")
+
         if self.executor_queuesize:
             f.write(f"executor.queueSize = {self.executor_queuesize}\n")
         f.close()
         self.__v(f"Created config file at {self.nextflow_config_path}")
+
+    def __create_nf_script(self):
+        """Create nextflow script and config file"""
+        self.__v(f"Calling {inspect.currentframe()}")
+        self.nextflow_script_path = os.path.abspath(
+            os.path.join(self.project_dir, DEFAULT_SCRIPT_NAME)
+        )
+
+        # write config file
+        now = dt.now().isoformat()
 
         # write script
         f = open(self.nextflow_script_path, "w")
@@ -343,13 +353,19 @@ class Nextflow:
     def execute(self, joblist, config_file=None):
         """Execute jobs in parallel."""
         self.__v(f"Calling {inspect.currentframe()}")
+        self.__v(f"self.project_dir = {self.project_dir}")
+
         if not self.__nextflow_checked:
             self.__check_nextflow()
         os.mkdir(self.project_dir) if not os.path.isdir(self.project_dir) else None
+
+        _config_exists = config_file is not None
         self.__generate_joblist_file(joblist)
+        self.__create_config_file(joblist, config_exists=_config_exists)
         self.__create_nf_script()
         if config_file:  # in case user wants to execute with pre-defined config file
             self.nextflow_script_path = config_file
+
         # TODO: add detach process feature (useful if user wants to execute several pipelines at once)
         cmd = f"{self.nextflow_exe} {self.nextflow_script_path} -c {self.nextflow_config_path}"
         self.executed_at = self._get_tmstmp()

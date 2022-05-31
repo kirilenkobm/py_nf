@@ -6,9 +6,9 @@ from collections import defaultdict
 import subprocess
 from collections import defaultdict
 import datetime
+from .version import __version__
 
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.2.7"
 
 NF_CLI_LAUNCHER_TAG = "nextflow.cli.Launcher"
 NF_EXE_COMPLETE_TAG = "Goodbye"

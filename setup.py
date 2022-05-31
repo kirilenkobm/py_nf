@@ -16,11 +16,14 @@ import os
 
 CURRENT_DIR = os.path.dirname(__file__)
 __author__ = "Bogdan Kirilenko"
-__version__ = "0.3.1"
-
 
 with open("README.md", "r") as f:
     long_description = f.read()
+
+with open("py_nf/version.py", "r") as f:
+    version = {}
+    exec(f.read(), version)
+    __version__ = version["__version__"]
 
 classifiers=[
     "Programming Language :: Python :: 3",

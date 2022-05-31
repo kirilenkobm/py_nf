@@ -4,6 +4,7 @@ import sys
 import shutil
 import subprocess
 from collections import Iterable
+from .version import __version__
 
 LOCAL = "local"
 NEXTFLOW = "nextflow"
