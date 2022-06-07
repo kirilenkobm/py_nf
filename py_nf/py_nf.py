@@ -361,7 +361,7 @@ class Nextflow:
 
         _config_exists = config_file is not None
         self.__generate_joblist_file(joblist)
-        self.__create_config_file(joblist, config_exists=_config_exists)
+        self.__create_config_file(config_exists=_config_exists)
         self.__create_nf_script()
         if config_file:  # in case user wants to execute with pre-defined config file
             self.nextflow_script_path = config_file
