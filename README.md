@@ -31,6 +31,22 @@ from py_nf.utils import install_nf_if_not_installed
 nf_executable = install_nf_if_not_installed()
 ```
 
+#### Nextflow install troubleshooting
+
+If you work on MacOS and nextflow, being installed with conda, crashes with the following message:
+
+```
+The operation couldn’t be completed. Unable to locate a Java Runtime.
+Please visit http://www.java.com for information on installing Java.
+
+/Users/XXX/opt/anaconda3/bin/nextflow: line 284: /bin/java: No such file or directory
+NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:
+ JAVA_CMD: /bin/java
+ NXF_OPTS: 
+```
+
+Please follow the recipe [here](https://github.com/nextflow-io/nextflow/issues/1523). Nextflow has a pretty sophisticated procedure to identify Java runtime. Commenting a couple of lines in this procedure may help. 
+
 ### Py_nf library
 
 To install py_nf just do:

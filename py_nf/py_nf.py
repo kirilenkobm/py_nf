@@ -367,6 +367,12 @@ class Nextflow:
             self.nextflow_script_path = config_file
 
         # TODO: add detach process feature (useful if user wants to execute several pipelines at once)
+        
+        ### Important, recent versions of nextflow use DSL2. The py_nf library runs with DSL1 only ###
+        # TODO: adapt for DSL2 version
+        # Temporary solution for now: force DSL1 use
+        os.environ["NXF_DEFAULT_DSL"] = "1"
+
         cmd = f"{self.nextflow_exe} {self.nextflow_script_path} -c {self.nextflow_config_path}"
         self.executed_at = self._get_tmstmp()
         self.__v(f"Executing command:\n{cmd}")
