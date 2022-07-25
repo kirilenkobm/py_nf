@@ -280,10 +280,14 @@ class Nextflow:
         now = dt.now().isoformat()
         f = open(self.nextflow_config_path, "w")
 
-        # TODO: depending on executor parameters list might differ
+        if self.executor_queuesize:
+            f.write(f"executor.queueSize = {self.executor_queuesize}\n")
+
         f.write(
             f"// automatically generated config file for project {self.project_name}\n"
         )
+
+        # TODO: depending on executor parameters the list of opts might differ
         f.write(f"// at: {now}\n")
         f.write("process {\n")
         f.write(f"    executor = '{self.executor}'\n")
@@ -311,8 +315,6 @@ class Nextflow:
 
         f.write("}\n")
 
-        if self.executor_queuesize:
-            f.write(f"executor.queueSize = {self.executor_queuesize}\n")
         f.close()
         self.__v(f"Created config file at {self.nextflow_config_path}")
 
